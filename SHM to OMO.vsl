@@ -1,0 +1,86 @@
+sub OnInitPlugin()
+	RegisterPlugin("SHMToOMO")
+	RegisterPluginFolder("MRubio")
+end sub
+
+Dim Title as String = "MRubio SHM to OMO v1.0.1"
+Dim LastSH as SharedMemory
+
+sub OnInitParameters()
+	RegisterInfoText(Title & "\n\nGets a SHM variable that has a numeric value and it will work as an OMO")
+	RegisterParameterString("SHM_Var", "SHM Variable:", "", 30, 500, "")
+	Dim MapNames As Array[String]
+	MapNames.push("Scene")
+	MapNames.push("Engine")
+	MapNames.push("Graphic Hub")
+	RegisterRadioButton("Scope", "Scope", 0, MapNames)
+	
+	Dim buttonNames As Array[String]
+	buttonNames.push("On Init")
+	buttonNames.push("On SHM Change")
+	RegisterRadioButton("ExecOption", "Execute", 0, buttonNames)
+	RegisterParameterBool("keep_vis", "Keep Visible", false)
+	RegisterParameterBool("debug", "Debug:", false)
+end sub
+
+sub OnParameterChanged(parameterName As String)
+	if parameterName = "Scope" Then 
+		LastSH.UnRegisterChangedCallback(GetParameterString("SHM_Var"))
+		Select case GetParameterInt("Scope")
+			case 0
+			    LastSH = Scene.Map
+			case 1
+			    LastSH = System.Map
+			case 2
+			    LastSH = VizCommunication.Map
+		End select
+		LOG "New SH Map:" & LastSH.VizId
+	end if
+
+	if GetParameterInt("ExecOption") = 0 Then
+		LOG "UnRegister " & GetParameterString("SHM_Var")
+		LastSH.UnRegisterChangedCallback(GetParameterString("SHM_Var"))
+	Else
+		LOG "Register " & GetParameterString("SHM_Var")
+		LastSH.RegisterChangedCallback(GetParameterString("SHM_Var"))
+	end if
+
+	ActualizaDatos
+end sub
+
+sub OnInit()
+    LastSH = Scene.Map
+	ActualizaDatos
+end sub
+
+sub ActualizaDatos()
+	Dim SHV as Integer = CINt(LastSH[GetParameterString("SHM_Var")])
+	LOG "ActualizaDatos " & this.Name & ":" & SHV
+	Dim cChilds = this.ChildContainer 
+	Dim i as Integer =0
+	Do while cChilds <> null
+		if SHV=i Then
+			cChilds.Active = true
+		else
+			if GetParameterBool("keep_vis") then
+				if i<SHV Then
+					cChilds.Active = true
+				else
+					cChilds.Active = false
+				End if
+			else
+				cChilds.Active = false
+			End if
+		End if
+		cChilds = cChilds.NextContainer
+		i=i+1
+	Loop
+end sub
+
+sub OnSharedMemoryVariableChanged(map As SharedMemory, mapKey As String)
+	ActualizaDatos
+end sub
+
+Sub LOG(msg as string)
+	if GetParameterBool("debug") Then println 9, msg
+End Sub

@@ -1,0 +1,127 @@
+Dim Title as String = "MRubio Get Container Info v.1.0.0"
+
+sub OnInitPlugin()
+	RegisterPlugin("GetContainerInfo")
+	RegisterPluginFolder("MRubio")
+end sub
+
+Sub OnInitParameters()
+	RegisterPluginVersion(1, 0, 0)
+	RegisterInfoText(Title & "\n
+Gets information from the container in the command window")
+	RegisterPushButton("SPACE", "** MAKE ROOM **", 10)
+'	RegisterSpacer("space1", 12)
+	RegisterPushButton("GetID", "Get ID", 1)
+	RegisterPushButton("GetDefDirector", "Get Default Director", 2)
+	RegisterPushButton("GetChannels", "Get Channels/Directors", 3)
+	RegisterPushButton("GetDirectors", "Get Directors", 4)
+	RegisterPushButton("GetKFs", "Get Keyframes", 5)
+	RegisterPushButton("GetChlids", "Get Childs", 6)
+End Sub
+
+Function AddEspaces(Original as String, Spaces as Integer) as String
+	Dim output as string
+	output = Original
+	Do While (Output.Length <= Spaces)
+		output = output & " "
+	Loop
+	AddEspaces = output
+End Function
+
+Function GetFullNameD(Dir as Director) as String
+	Dim output as String
+	Dim TempDir as Director
+	output = Dir.Name
+	TempDir = Dir.ParentDirector
+	Do While TempDir <> null
+		output = TempDir.Name & "/" & output
+		TempDir = TempDir.ParentDirector
+	Loop
+	GetFullNameD = output
+End function
+
+Function GetFullNameC(Con as Container) as String
+	Dim output as String
+	Dim Temp as Container
+	output = Con.Name
+	Temp = Con.ParentContainer
+	Do While Temp <> null
+		output = Temp.Name & "$" & output
+		Temp = Temp.ParentContainer
+	Loop
+	GetFullNameC = output
+End function
+
+Sub OnExecAction(buttonId As Integer)
+	println "\n"
+	Select case buttonId
+		Case 1
+			println "*******************  GetContainerInfo - Get ID  ********************"
+			println "** Container ID  : #" & AddEspaces(CStr(This.VizId), 45) & "**"
+			println "** Container Name: " & AddEspaces(This.Name, 45) & " **"
+			println "** Full Name     : " & AddEspaces(GetFullNameC(This), 45) & " **"
+			println "********************************************************************"
+		Case 2
+			println "****** GetContainerInfo - Get Default Director ******"
+			println "**  Director  : " & AddEspaces(This.GetDirector().Name, 33) & " **"
+			println "**  Full Name : " & AddEspaces(GetFullNameD(This.GetDirector()), 33) & " **"
+			println "**  ID        : #" & AddEspaces(CStr(This.GetDirector().VizId), 32) & " **"
+			println "*****************************************************"
+		Case 3
+			Dim v As Array[Channel]
+			Dim NumChannels As Integer = this.GetChannelsOfObject(v)
+
+			println "************ GetContainerInfo - GetChannels/Directors *************"
+			println "** Number of channels :" & AddEspaces(CStr(NumChannels), 41) & "**"
+			for each myChannel in v
+				println "**   Channel :" & AddEspaces(myChannel.Name, 10) & " ID: #" &  AddEspaces(CStr(myChannel.VizId), 12) & "Dir: " & AddEspaces(myChannel.Director.Name, 15) & "**"
+			next
+			println "*******************************************************************"
+		Case 4
+			Dim v As Array[Channel]
+			Dim Dirs As Array[Director]
+			this.GetChannelsOfObject(v)
+			for each myChannel in v
+				Dim bAdd as Boolean = true
+				for each myDir in Dirs
+					if myDir.VizId = myChannel.Director.VizId Then bAdd = false 
+				next
+				if bAdd Then Dirs.Push(myChannel.Director)
+			next
+			println "******* GetContainerInfo - Get Directors   ********"
+			for each myDir in Dirs
+				println "** Director :" & AddEspaces(GetFullNameD(myDir), 35) & "**"
+			next
+			println "***************************************************"
+		Case 5
+			Dim v As Array[Channel]
+			this.GetChannelsOfObject(v)
+
+			println "****************** GetContainerInfo - Get Keyframes *******************"
+			for each myChannel in v
+				println "** Channel: " & AddEspaces(myChannel.Name, 10) & " Num KFs: " & AddEspaces(CStr(myChannel.KeyframeCount), 12) & "Dir: " & AddEspaces(myChannel.Director.Name, 16) & " **"
+				for i=0 to myChannel.KeyframeCount -1
+					Dim KF as Keyframe = myChannel.GetKeyframe(i)
+					println "**   KF Pos:" & AddEspaces(CStr(i), 3) & "Name: " & AddEspaces(KF.Name, 12) & " ID: #" & AddEspaces(CStr(KF.VizId), 8) & "Time: " & AddEspaces(CStr(DoubleToString(KF.Time, 4)), 11) & " **"
+				next
+			next
+			println "***********************************************************************"
+		Case 6
+			println "***** GetContainerInfo - Get Container Childs  *****"
+			Recursive(this, "")
+			println "****************************************************"
+		Case 10
+			Dim cmd as string
+			For i=0 to 30
+				cmd = cmd & "\n"
+			next
+			println cmd 
+	end select
+End Sub
+
+Sub Recursive(c as Container, prefix as String)
+	Println "** " &  AddEspaces(prefix & c.Name,45) & " **"
+	For i=0 to c.ChildContainerCount-1
+		Recursive c.GetChildContainerByIndex(i), prefix & "--"
+	Next
+End Sub

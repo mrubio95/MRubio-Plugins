@@ -1,0 +1,72 @@
+sub OnInitPlugin()
+	RegisterPlugin("SHMToVisible")
+	RegisterPluginFolder("MRubio")
+end sub
+
+Dim Title as String = "MRubio SHM to Visible v1.0.1"
+Dim LastSH as SharedMemory
+
+sub OnInitParameters()
+	RegisterInfoText(Title & "\n\nGets a SHM variable that can have a value true/false or 0/1 and it will activate/deactivate the visibility of the container")
+	RegisterParameterString("SHM_Var", "SHM Variable:", "", 30, 500, "")
+	Dim MapNames As Array[String]
+	MapNames.push("Scene")
+	MapNames.push("Engine")
+	MapNames.push("Graphic Hub")
+	RegisterRadioButton("Scope", "Scope", 0, MapNames)
+	
+	Dim buttonNames As Array[String]
+	buttonNames.push("On Init")
+	buttonNames.push("On SHM Change")
+	RegisterRadioButton("ExecOption", "Execute", 0, buttonNames)
+	RegisterParameterBool("debug", "Debug:", false)
+end sub
+
+sub OnParameterChanged(parameterName As String)
+	if parameterName = "Scope" Then 
+		LastSH.UnRegisterChangedCallback(GetParameterString("SHM_Var"))
+		Select case GetParameterInt("Scope")
+			case 0
+			    LastSH = Scene.Map
+			case 1
+			    LastSH = System.Map
+			case 2
+			    LastSH = VizCommunication.Map
+		End select
+		LOG "New SH Map:" & LastSH.VizId
+	end if
+
+	if GetParameterInt("ExecOption") = 0 Then
+		LOG "UnRegister " & GetParameterString("SHM_Var")
+		LastSH.UnRegisterChangedCallback(GetParameterString("SHM_Var"))
+	Else
+		LOG "Register " & GetParameterString("SHM_Var")
+		LastSH.RegisterChangedCallback(GetParameterString("SHM_Var"))
+	end if
+
+	ActualizaDatos
+end sub
+
+sub OnInit()
+    LastSH = Scene.Map
+	ActualizaDatos
+end sub
+
+sub ActualizaDatos()
+	Dim SHV as String = LastSH[GetParameterString("SHM_Var")]
+	LOG "ActualizaDatos " & this.Name & ":" & SHV
+	SHV.MakeLower()
+	if SHV = "true" or SHV="1" then
+		this.active = true
+	else
+		this.active = false
+	end if
+end sub
+
+sub OnSharedMemoryVariableChanged(map As SharedMemory, mapKey As String)
+	ActualizaDatos
+end sub
+
+Sub LOG(msg as string)
+	if GetParameterBool("debug") Then println 9, msg
+End Sub

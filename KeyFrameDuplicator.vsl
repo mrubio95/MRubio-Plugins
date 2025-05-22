@@ -1,0 +1,252 @@
+sub OnInitPlugin()
+	RegisterPlugin("KeyFrameDuplicator")
+	RegisterPluginFolder("MRubio")
+end sub
+
+Dim Title as String = "MRubio KeyFrameDuplicator v.1.0.5"
+Dim NumKeyFrames as Integer = 8
+Dim NewIndex as Integer
+
+Sub OnInitParameters()
+	RegisterPluginVersion(1, 0, 0)
+	RegisterInfoText(Title & "\n\n
+Use # in the Replace field to set the right number")
+
+	RegisterParameterInt("numCopies", "Numer of Copies:", 2, 0, 100)
+
+	RegisterParameterInt("index", "Start Index:", 1, 0, 99999)
+	Dim KFNameOptions As Array[String]
+	KFNameOptions.push "by Keframe Name"
+	KFNameOptions.push "by Postion"
+
+	For kf=1 to NumKeyFrames
+		RegisterParameterBool("chgKeyFrame" & kf, "Keyframe " & kf, false)
+
+		RegisterRadioButton("KF" & kf & "FindBy", "  KF" & kf & " Position:", 0, KFNameOptions)
+		RegisterParameterString("KF" & kf & "ByName", "  KF" & kf & " Name:", "", 20,250, "")
+		RegisterParameterInt("KF" & kf & "ByPos", "  KF" & kf & " Channel Position:", 1, 0, 99999)
+		RegisterParameterString("KF" & kf & "NameFind", "  KF" & kf & " Find in Name:", "", 20,250, "")
+		RegisterParameterString("KF" & kf & "NameReplace", "  KF" & kf & " Replace with:", "", 20,250, "")
+		RegisterParameterDouble("KF" & kf & "IncTime", "  KF" & kf & " Increase Time (seconds):", 0, -5000, 5000)
+		RegisterParameterDouble("KF" & kf & "IncFloat", "  KF" & kf & " Increase Float value:", 0, -5000, 5000)
+		RegisterParameterInt("KF" & kf & "IncInt", "  KF" & kf & " Increase Int value:", 0, -5000, 5000)
+		RegisterParameterDouble("KF" & kf & "IncX", "  KF" & kf & " Increase Vertex value X:", 0, -5000, 5000)
+		RegisterParameterDouble("KF" & kf & "IncY", "  KF" & kf & " Increase Vertex value Y:", 0, -5000, 5000)
+		RegisterParameterDouble("KF" & kf & "IncZ", "  KF" & kf & " Increase Vertex value Z:", 0, -5000, 5000)
+		RegisterParameterString("KF" & kf & "ActionFind", "  KF" & kf & " Find in Action:", "", 20,250, "")
+		RegisterParameterString("KF" & kf & "ActionReplace", "  KF" & kf & " Replace in Action with:", "", 20,250, "")
+	Next
+
+	RegisterPushButton("btnKF1", "Execute KF1", 1)
+	RegisterPushButton("btnKF2", "Execute KF2", 2)
+	RegisterPushButton("btnKF3", "Execute KF3", 3)
+	RegisterPushButton("btnKF4", "Execute KF4", 4)
+	RegisterPushButton("execute", "  EXECUTE  ", 9)
+
+'	RegisterPushButton("test", "  TESTS  ", 4)
+	RegisterParameterBool("debug", "Debug:", false)
+End Sub
+
+Sub OnParameterChanged(parameterName As String)
+	Dim bShow as boolean = true
+	For kf=1 to NumKeyFrames
+		if kf=1 Then
+			SendGuiParameterShow("chgKeyFrame" & kf, SHOW)
+		else
+			if GetParameterBool("chgKeyFrame" & kf-1) Then
+				SendGuiParameterShow("chgKeyFrame" & kf, SHOW)
+			else
+				SendGuiParameterShow("chgKeyFrame" & kf, HIDE)
+				bShow = false
+			end if
+		end if
+		if GetParameterBool("chgKeyFrame" & kf) AND bShow Then
+			SendGuiParameterShow("KF" & kf & "FindBy", SHOW)
+			if GetParameterInt("KF" & kf & "FindBy") = 0 Then
+				SendGuiParameterShow("KF" & kf & "ByPos", HIDE)
+				SendGuiParameterShow("KF" & kf & "ByName", SHOW)
+			else
+				SendGuiParameterShow("KF" & kf & "ByName", HIDE)
+				SendGuiParameterShow("KF" & kf & "ByPos", SHOW)
+			end if
+			SendGuiParameterShow("KF" & kf & "NameFind", SHOW)
+			SendGuiParameterShow("KF" & kf & "NameReplace", SHOW)
+			SendGuiParameterShow("KF" & kf & "IncTime", SHOW)
+			SendGuiParameterShow("KF" & kf & "IncFloat", SHOW)
+			SendGuiParameterShow("KF" & kf & "IncInt", SHOW)
+			SendGuiParameterShow("KF" & kf & "IncX", SHOW)
+			SendGuiParameterShow("KF" & kf & "IncY", SHOW)
+			SendGuiParameterShow("KF" & kf & "IncZ", SHOW)
+			SendGuiParameterShow("KF" & kf & "ActionFind", SHOW)
+			SendGuiParameterShow("KF" & kf & "ActionReplace", SHOW)
+			SendGuiParameterShow("btnKF" & kf, SHOW)
+		else
+			SendGuiParameterShow("KF" & kf & "FindBy", HIDE)
+			SendGuiParameterShow("KF" & kf & "ByName", HIDE)
+			SendGuiParameterShow("KF" & kf & "ByPos", HIDE)
+			SendGuiParameterShow("KF" & kf & "NameFind", HIDE)
+			SendGuiParameterShow("KF" & kf & "NameReplace", HIDE)
+			SendGuiParameterShow("KF" & kf & "IncTime", HIDE)
+			SendGuiParameterShow("KF" & kf & "IncFloat", HIDE)
+			SendGuiParameterShow("KF" & kf & "IncInt", HIDE)
+			SendGuiParameterShow("KF" & kf & "IncX", HIDE)
+			SendGuiParameterShow("KF" & kf & "IncY", HIDE)
+			SendGuiParameterShow("KF" & kf & "IncZ", HIDE)
+			SendGuiParameterShow("KF" & kf & "ActionFind", HIDE)
+			SendGuiParameterShow("KF" & kf & "ActionReplace", HIDE)
+			SendGuiParameterShow("btnKF" & kf, HIDE)
+		end if
+	Next
+End Sub
+
+Sub LOG(msg as string)
+	if GetParameterBool("debug") Then println 9, msg
+End Sub
+
+Function CreateNewName(ByVal orig as String, ByVal find as String, ByVal replace as String) as String
+	LOG  "-----CreateNewName1:" & orig & " find:" & find & " replace:" & replace & " index:" & NewIndex
+	Dim IndexPos as Integer = replace.Find("#")
+	Dim rep as String = replace
+	if IndexPos > -1 Then
+		'Get the number of #
+		Dim indexcon as Integer = 1
+		Do while replace.GetSubstring(IndexPos+indexcon, 1) = "#"
+			indexcon = indexcon + 1
+		Loop
+		Dim replaceRightSide as String = replace.GetSubstring(IndexPos+indexcon, replace.Length-(IndexPos+indexcon))
+		Dim TempName as String = replace
+		Dim NewNumber as String = CStr(NewIndex)
+		if NewNumber.Length < indexcon Then  NewNumber = IntToString(NewIndex, indexcon, true)
+		rep = TempName.Left(IndexPos) & NewNumber & replaceRightSide
+	end if
+
+	IndexPos = orig.Find(find)
+	if IndexPos > -1 Then
+		Dim TempName as String = orig
+		orig = TempName.Left(IndexPos) & rep
+		' TODO Not important: Calcular fin de cadena para que no de warning
+		if TempName.Length > IndexPos + find.Length Then orig = orig & TempName.GetSubstring(IndexPos + find.Length, TempName.Length)
+	end if
+	CreateNewName = orig
+	LOG  "-----CreateNewName2:" & orig
+End Function
+
+Function CalculateNewValue(orig as Double, Increase as Double) as Double
+    CalculateNewValue = orig + ((NewIndex-GetParameterInt("index")+1) * CDbl(Increase))
+End Function
+
+Sub SendBezierHandleCommand(ActBH as BezierHandle, Axe as string, KFVizId as integer)
+	SendCommand "#" & KFVizId & "*HANDLE_" & Axe & "*LEFT_MODE SET " & GetInterpolationMode(ActBH.LeftInterpolationMode)
+	SendCommand "#" & KFVizId & "*HANDLE_" & Axe & "*RIGHT_MODE SET " & GetInterpolationMode(ActBH.RightInterpolationMode)
+	SendCommand "#" & KFVizId & "*HANDLE_" & Axe & "*LOCK_MODE SET " & GetLockMode(ActBH.LockMode)
+	SendCommand "#" & KFVizId & "*HANDLE_" & Axe & "*LEFT_WEIGHT SET " & ActBH.LeftWeight
+	SendCommand "#" & KFVizId & "*HANDLE_" & Axe & "*RIGHT_WEIGHT SET " & ActBH.RightWeight
+	SendCommand "#" & KFVizId & "*HANDLE_" & Axe & "*LEFT_BIAS SET " & ActBH.LeftAngle
+	SendCommand "#" & KFVizId & "*HANDLE_" & Axe & "*RIGHT_BIAS SET " & ActBH.RightAngle
+End sub
+
+Function GetInterpolationMode(IM as Integer) as string
+	if IM = HANDLE_INTERPOLATION_MODE_SMOOTH Then
+		GetInterpolationMode = "SMOOTH"
+	else
+		GetInterpolationMode = "LINEAR"
+	end if
+End Function
+
+Function GetLockMode(LM as Integer) as string
+	if LM = HANDLE_LOCK_MODE_MIRROR Then
+		GetLockMode = "MIRROR"
+	elseif LM = HANDLE_LOCK_MODE_SINGLE Then
+		GetLockMode = "SINGLE"
+	else 'HANDLE_LOCK_MODE_LOCKED
+		GetLockMode = "LOCKED"
+	end if
+End Function
+
+Sub DuplicatePathHandle(ByRef newKFPH as BezierHandle, ByRef OriginalKFPH as BezierHandle)
+	newKFPH.LeftAngle = OriginalKFPH.LeftAngle
+	newKFPH.LeftInterpolationMode = OriginalKFPH.LeftInterpolationMode
+	newKFPH.LeftWeight = OriginalKFPH.LeftWeight
+	newKFPH.LockMode = OriginalKFPH.LockMode
+	newKFPH.RightAngle = OriginalKFPH.RightAngle
+	newKFPH.RightInterpolationMode = OriginalKFPH.RightInterpolationMode
+	newKFPH.RightWeight = OriginalKFPH.RightWeight
+End Sub				
+
+Sub ExecuteKF(kf as Integer)
+	if GetParameterBool("chgKeyFrame" & kf) Then
+		Dim OriginalKF as KeyFrame
+		
+		if GetParameterInt("KF" &  kf & "FindBy") = 0 Then
+			OriginalKF = this.GetDirector().FindKeyframe(GetParameterString("KF" &  kf & "ByName"))
+		Else
+			Dim AllChannels as Array[Channel]
+			this.GetChannelsOfObject(AllChannels)
+			OriginalKF = AllChannels[0].GetKeyframe(GetParameterInt("KF" &  kf & "ByPos"))
+		End if
+		if OriginalKF <> null then
+			Dim ORIGINAL as String = OriginalKF.Name
+			NewIndex = GetParameterInt("index")
+			For i=1 to GetParameterInt("numCopies")
+LOG "*** KF" & kf & " execute running: " & i & " / " &  GetParameterInt("numCopies") & " ***"
+
+				'Calculate Time
+				Dim NewTime as Double = CalculateNewValue(OriginalKF.Time, GetParameterDouble("KF" &  kf & "IncTime"))
+				Dim newKF as Keyframe = null
+				newKF = OriginalKF.Channel.AddKeyframe(NewTime)
+				
+				'Duplicate 
+				newKF.Locked = OriginalKF.Locked
+				if OriginalKF.PathHandle <> Null Then
+					DuplicatePathHandle (newKF.PathHandle, OriginalKF.PathHandle)
+				else
+					SendBezierHandleCommand(OriginalKF.GetBezierHandle(0), "X", newKF.VizId)
+					SendBezierHandleCommand(OriginalKF.GetBezierHandle(1), "Y", newKF.VizId)
+					SendBezierHandleCommand(OriginalKF.GetBezierHandle(2), "Z", newKF.VizId)
+				end if
+
+				if GetParameterDouble("KF" &  kf & "IncFloat") <> 0 then
+					newKF.FloatValue = CalculateNewValue(OriginalKF.FloatValue, GetParameterDouble("KF" &  kf & "IncFloat"))
+				else
+					newKF.FloatValue = OriginalKF.FloatValue
+				end if
+				
+				if GetParameterInt("KF" &  kf & "IncInt") <> 0 then
+					newKF.IntValue = CInt(CalculateNewValue(CDbl(OriginalKF.IntValue), CDbl(GetParameterInt("KF" &  kf & "IncInt"))))
+				else
+					newKF.IntValue = OriginalKF.IntValue
+				end if
+
+				Dim v as Vertex = OriginalKF.XyzValue
+				if GetParameterDouble("KF" &  kf & "IncX") <> 0 Then v.X = CalculateNewValue(v.X, GetParameterDouble("KF" &  kf & "IncX"))
+				if GetParameterDouble("KF" &  kf & "IncY") <> 0 Then v.Y = CalculateNewValue(v.Y, GetParameterDouble("KF" &  kf & "IncY"))
+				if GetParameterDouble("KF" &  kf & "IncZ") <> 0 Then v.Z = CalculateNewValue(v.Z, GetParameterDouble("KF" &  kf & "IncZ"))
+				newKF.XyzValue = v
+				
+				if GetParameterString("KF" &  kf & "ActionFind") <> "" then
+					newKF.ActionString = CreateNewName(OriginalKF.ActionString, GetParameterString("KF" &  kf & "ActionFind"), GetParameterString("KF" &  kf & "ActionReplace"))
+				else
+					newKF.ActionString = OriginalKF.ActionString
+				end if
+
+				if GetParameterString("KF" &  kf & "NameFind") <> "" Then
+					newKF.Name = CreateNewName(ORIGINAL, GetParameterString("KF" &  kf & "NameFind"), GetParameterString("KF" &  kf & "NameReplace"))
+				else
+					newKF.Name = ORIGINAL
+				end if
+				NewIndex = NewIndex + 1
+			Next
+'			OriginalKF.Name = ORIGINAL
+		end if
+	end if
+End Sub
+
+Sub OnExecAction(buttonId As Integer)
+	if buttonId = 9 then
+		For kf=1 to NumKeyFrames
+			ExecuteKF(kf)
+		Next
+	else
+		ExecuteKF buttonId
+	end if
+end sub

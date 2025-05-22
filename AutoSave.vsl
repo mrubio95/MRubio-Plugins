@@ -1,0 +1,123 @@
+sub OnInitPlugin()
+	RegisterPlugin("AutoSave")
+	RegisterPluginFolder("MRubio")
+end sub
+
+Dim Title as String = "MRubio Autosave script v.1.0.0"
+
+Structure strTime
+	hour as string
+	minute as string
+	second as string
+	month as string
+	day as string
+	year as string
+end structure
+
+Dim delay as Integer
+
+Sub OnInitParameters()
+	RegisterPluginVersion(1, 0, 0)
+	RegisterInfoText(Title & "\n\n
+Saves a copy of the scene in a subdirectory each X Seconds")
+	RegisterParameterInt("Interval","Save every X Seconds:",60,1,(1*60*60)) 
+	RegisterParameterInt("SPN_NumBackups","Number of backups",5,0,20)
+	RegisterParameterBool("Autosave","Activate Autosave:", false)
+	RegisterParameterString("AutoSaveDir", "Sub Director Name:", "-Autobackup-", 50, 50, "")
+End sub
+
+Function GetAbsPath(bOutputString as boolean) as string
+	dim aPath as array[string] 
+	Scene.LocationPath.Split("/", aPath)
+	
+	for i = 0 to (aPath.ubound-1)
+		GetAbsPath = GetAbsPath & (aPath[i] & "/")
+	next
+	
+	if bOutputString = true then
+		aPath.clear()
+		GetAbsPath.split("*",aPath)
+		GetAbsPath = aPath[1]
+	end if
+End function
+
+Function getFile(sInputPath as string) as string
+	dim aPath as array[string] 
+	sInputPath.split("/",aPath)
+	getfile = aPath[aPath.ubound]
+end function
+
+Function GetFilesInDirectory() as Array[string]
+	Dim sNames as String = SendCommand("SCENE GET_DETAIL /" & GetAbsPath(true) & GetParameterString("AutoSaveDir"))
+	Dim aNames as array[string]
+	sNames.TclSplit(aNames)
+	For each strFileName in aNames
+		dim aElement as array[string]
+		strFileName.tclSplit(aElement)
+		Dim filename as string = GetFile(aElement[0])
+
+		If Filename.StartsWith(Scene.Name) Then GetFilesInDirectory.push(strFileName)
+	Next
+End function
+
+Function GetOldestBackup() as string
+	dim aNames as Array[String] = GetFilesInDirectory()
+	dim OldestSecond as Integer = 999999999999999999999
+	dim OldestFile as String
+	For each oldFile in aNames
+		Dim aElement as array[string]
+		oldFile.tclSplit(aElement)
+		Dim filename as string = GetFile(aElement[0])
+		if filename.StartsWith(Scene.Name) Then
+			if cint(aElement[4]) < OldestSecond then
+				OldestSecond = cint(aElement[4])
+				OldestFile = aElement[0]
+			end if
+		end if
+	Next
+	GetOldestBackup = OldestFile
+end function
+
+Function GetTime() as strTime
+	dim Currenttime = getCurrentTime()
+	Gettime.hour = IntToString(CurrentTime.hour,2,true)
+	Gettime.minute = IntToString(CurrentTime.minute,2,true)
+	Gettime.second = IntToString(CurrentTime.Second,2,true)
+	Gettime.month = IntToString(CurrentTime.Month,2,true)
+	Gettime.day = IntToString(CurrentTime.dayOfMonth,2,true)
+	GetTime.year = cstr(CurrentTime.year)
+end function
+
+sub OnExecPerField()
+	if GetparameterBool("Autosave") = true then
+		delay = delay + 1
+		if (delay >= 50*GetParameterInt("Interval")) then
+			delay = 0
+			if (sendCommand("ONAIR GET_ONAIR")) = "OFFAIR" then
+				Dim AutoSaveDir as String = GetParameterString("AutoSaveDir")
+				if (sendCommand("SCENE FOLDER_EXIST " & GetAbsPath(false) & AutoSaveDir & "/")) = "0" then
+					println("Auto backup folder does not exist, creating autoback folder")
+					println(sendCommand("SCENE ADD_GROUP " & "/" & 	GetAbsPath(true) & AutoSaveDir))
+				end if
+
+				Dim time as strTime = GetTime()
+				Dim TimeStamp as string = time.day &"-"& time.month &"-"& time.year
+				TimeStamp = TimeStamp & "|" & time.hour & time.minute & time.second
+
+				Dim sName as String = Scene.Name & "[" & TimeStamp & "]" 
+				if getParameterInt("SPN_NumBackups") > 0 Then
+					Dim OldestScene as String = GetOldestBackup()
+					Dim aNames as array[string] = GetFilesInDirectory()
+					if aNames.size>getParameterInt("SPN_NumBackups")-1 then
+						if OldestScene <> "" then
+							println("Deleting file " & OldestScene)
+							SendCommand("SCENE DELETE " & OldestScene)
+						end if
+					end if
+				end if
+				println("Writing file:" & GetAbsPath(false) & AutoSaveDir & "/" & sName )
+				SendCommand("SCENE SAVE_AS " & Scene.LocationPath & " " & GetAbsPath(false) & AutoSaveDir & "/" & sName)
+			end if
+		End if
+	End if
+End sub

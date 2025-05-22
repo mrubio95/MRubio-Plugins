@@ -1,0 +1,38 @@
+Dim Title as String = "MRubio Get Images from GH v.1.0.0"
+
+sub OnInitPlugin()
+	RegisterPlugin("GetImages")
+	RegisterPluginFolder("MRubio")
+end sub
+
+sub OnInitParameters()
+	RegisterInfoText(Title & "\n\nGets an all the image from a GH folder and create a container for each one")
+	RegisterParameterString("GHPath", "GH Path:", "", 30, 500, "")
+	RegisterPushButton("init", "START", 1)
+	RegisterPushButton("reset", "RESTORE", 2)
+end sub
+
+Sub OnExecAction(buttonId As Integer)
+	This.DeleteChildren()
+	if buttonId = 1 Then ActualizarDatos()
+End Sub
+
+Sub ActualizarDatos()
+	This.Active = false
+
+	Dim strPath as string = GetParameterString("GHPath")
+	if NOT strPath.StartsWith("IMAGE*") Then strPath = "IMAGE*" & strPath
+	Dim Answer as String = 	System.SendCommand(strPath & " GET_DETAIL")
+	Println Answer
+	Dim AllImages as Array[String]
+	Answer.TclSplit(AllImages)
+	for each img in AllImages
+		img = img.GetSubstring(0, img.Find("{")-1)
+		img.Trim()
+		Dim newCont as Container = This.AddContainer(TL_DOWN)
+		newCont.CreateTexture(img)
+		newCont.Name = img.GetSubstring(img.FindLastOf("/")+1, img.Length)
+	next
+	Scene.UpdateSceneTree()
+End Sub
+

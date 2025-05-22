@@ -1,0 +1,14 @@
+sub OnInitPlugin()
+	RegisterPlugin("NoggiOK")
+	RegisterPluginFolder("MRubio")
+end sub
+
+sub OnInit()
+	CreateGeometry("BUILT_IN*GEOM*Noggi")
+	this.Geometry.SetParameterDouble("stretch", 0)
+	
+	For i=0 To 3
+		this.Geometry.SetParameterDouble("bevel_" & i, 0)
+	Next
+	DeleteFunction("NoggiOK")
+end sub

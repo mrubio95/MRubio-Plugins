@@ -1,0 +1,97 @@
+sub OnInitPlugin()
+	RegisterPlugin("SHMToActionTable")
+	RegisterPluginFolder("MRubio")
+end sub
+
+Dim Title as String = "MRubio SHM to ActionTable v1.0.1"
+Dim LastSH as SharedMemory
+
+sub OnInitParameters()
+	RegisterInfoText(Title & "\n\nGets a SHM variable and execute viz commands")
+	RegisterParameterString("SHM_Var", "SHM Variable:", "", 30, 500, "")
+	Dim MapNames As Array[String]
+	MapNames.push("Scene")
+	MapNames.push("Engine")
+	MapNames.push("Graphic Hub")
+	RegisterRadioButton("Scope", "Scope", 0, MapNames)
+	Dim buttonNames As Array[String]
+	buttonNames.push("On Init")
+	buttonNames.push("On SHM Change")
+	RegisterRadioButton("ExecOption", "Execute", 0, buttonNames)
+	RegisterParameterString("Value1", "Value 1:", "", 10, 500, "")
+	RegisterParameterString("Action1", "Action 1:", "", 60, 500, "")
+	RegisterParameterString("Value2", "Value 2:", "", 10, 500, "")
+	RegisterParameterString("Action2", "Action 2:", "", 60, 500, "")
+	RegisterParameterString("Value3", "Value 3:", "", 10, 500, "")
+	RegisterParameterString("Action3", "Action 3:", "", 60, 500, "")
+	RegisterParameterString("Value4", "Value 4:", "", 10, 500, "")
+	RegisterParameterString("Action4", "Action 4:", "", 60, 500, "")
+	RegisterParameterString("Value5", "Value 5:", "", 10, 500, "")
+	RegisterParameterString("Action5", "Action 5:", "", 60, 500, "")
+	RegisterParameterString("Value6", "Value 6:", "", 10, 500, "")
+	RegisterParameterString("Action6", "Action 6:", "", 60, 500, "")
+	RegisterParameterString("Value7", "Value 7:", "", 10, 500, "")
+	RegisterParameterString("Action7", "Action 7:", "", 60, 500, "")
+	RegisterParameterString("Value8", "Value 8:", "", 10, 500, "")
+	RegisterParameterString("Action8", "Action 8:", "", 60, 500, "")
+	RegisterParameterString("Value9", "Value 9:", "", 10, 500, "")
+	RegisterParameterString("Action9", "Action 9:", "", 60, 500, "")
+	RegisterParameterString("Value10", "Value 10:", "", 10, 500, "")
+	RegisterParameterString("Action10", "Action 10:", "", 60, 500, "")
+	RegisterParameterBool("debug", "Debug:", false)
+end sub
+
+sub OnParameterChanged(parameterName As String)
+	if parameterName = "Scope" Then 
+		LastSH.UnRegisterChangedCallback(GetParameterString("SHM_Var"))
+		Select case GetParameterInt("Scope")
+			case 0
+			    LastSH = Scene.Map
+			case 1
+			    LastSH = System.Map
+			case 2
+			    LastSH = VizCommunication.Map
+		End select
+		LOG "New SH Map:" & LastSH.VizId
+	end if
+
+	if GetParameterInt("ExecOption") = 0 Then
+		LOG "UnRegister " & GetParameterString("SHM_Var")
+		LastSH.UnRegisterChangedCallback(GetParameterString("SHM_Var"))
+	Else
+		LOG "Register " & GetParameterString("SHM_Var")
+		LastSH.RegisterChangedCallback(GetParameterString("SHM_Var"))
+	end if
+
+	ActualizaDatos
+end sub
+
+sub OnInit()
+    LastSH = Scene.Map
+	ActualizaDatos
+end sub
+
+sub ActualizaDatos()
+	Dim SHV as String = LastSH[GetParameterString("SHM_Var")]
+	LOG "ActualizaDatos " & this.Name & ":" & SHV
+	for i=1 to 10
+		Dim Valor = GetParameterString("Value" & i)
+		if Valor <> "" and Valor =SHV Then
+			Dim vizCmd = GetParameterString("Action" & i)
+			'Replace THIS_SCENE*
+			vizCmd.Substitute("THIS_SCENE*", "#" & Scene.VizId, true)
+			'Replace THIS_CONTAINER*
+			vizCmd.Substitute("THIS_CONTAINER*", "#" & this.VizId, true)
+			
+			SendCommand(vizCmd)
+		end if
+	next
+end sub
+
+sub OnSharedMemoryVariableChanged(map As SharedMemory, mapKey As String)
+	ActualizaDatos
+end sub
+
+Sub LOG(msg as string)
+	if GetParameterBool("debug") Then println 9, msg
+End Sub

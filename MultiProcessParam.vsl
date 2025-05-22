@@ -1,0 +1,446 @@
+Dim Title as String = "MRubio MultiProcessParam v.1.0.10"
+Dim NumKeyControls as Integer = 6
+Dim NumKeyFrames as Integer = 6
+Dim NumPlugins as Integer = 8
+Dim NumActionKeyFrames as Integer = 5
+Dim NumTrans as Integer = 6
+
+sub OnInitPlugin()
+	RegisterPlugin("MultiProcessParam")
+	RegisterPluginFolder("MRubio")
+end sub
+
+Sub OnInitParameters()
+	Dim KFChOptions As Array[String]
+	KFChOptions.push "Default Channel Name"
+	KFChOptions.push "Specific Channel Name"
+	Dim KFNameOptions As Array[String]
+	KFNameOptions.push "by Postion in Channel"
+	KFNameOptions.push "by Keframe Name"
+
+	RegisterPluginVersion(1, 0, 0)
+	RegisterInfoText(Title & "\n
+Use it in with plugin xxxx. Same version always!!")
+
+	RegisterParameterBool("chgName", "** CONTAINER **", false)
+	RegisterParameterBool("cNewContainer", "New Container", false)
+	RegisterParameterString("NameFind", "Name Find:", "_01", 20,250, "")
+	RegisterParameterString("NameReplace", "Name Replace with:", "_##", 20,250, "")
+	RegisterParameterBool("chgText", "Change Text", false)
+	RegisterParameterBool("TextOriginal", "Copy GEOM from Original", false)
+	RegisterParameterString("TextFind", "Text Find:", "_01", 20,250, "")
+	RegisterParameterString("TextReplace", "Text Replace with:", "_##", 20,250, "")
+	
+	'Container
+	RegisterParameterBool("cReplaceAllChildren", "Replace All Children", false)
+	RegisterParameterBool("chgTrans", "TRANSFORMATION", false)
+	RegisterParameterBool("TransOriginal", "  Copy transformation from Original", false)
+	Dim ChType As Array[String]
+	ChType.push "Copy Original"
+	ChType.push "Number"
+	ChType.push "Text"
+	For NT=1 to NumTrans
+		RegisterParameterBool("chgCProp" & NT, "  Change Container properties " & NT, false)
+		RegisterParameterString("ct" & NT & "CPropName", "   Property Name:", "TRANSFORMATION*POSITION*X", 50,250, "")
+		RegisterRadioButton("ct" & NT & "CPropType", "   Property process Name:", 0, ChType)
+		RegisterParameterDouble("ct" & NT & "CPropNumber", "   Increase value:", 0, -5000, 5000)
+		RegisterParameterString("ct" & NT & "CPropTextFind", "   Find:", "_01", 20,250, "")
+		RegisterParameterString("ct" & NT & "CPropTextReplace", "   Replace with:", "_##", 20,250, "")
+	Next
+
+	'Plugins / Controls
+'	RegisterSpacer("spacePlugins", 20)	
+	RegisterParameterBool("chgControls", "** PLUGINS **", false)
+	Dim ChControls As Array[String]
+	ChControls.push "Other"
+	ChControls.push "ControlText"
+	ChControls.push "ControlImage"
+	ChControls.push "ControlParameter"
+	ChControls.push "ControlNumber"
+	ChControls.push "ControlMaterial"
+	For i=1 to NumKeyControls
+		RegisterParameterBool("chgControl" & i, "Change Plugin " & i, false)
+		RegisterRadioButton("ct" & i & "Type", "  Default Control Plugin:", 0, ChControls)
+		RegisterParameterString("ct" & i & "TypeOther", "  Plugin Name:", "Autofollow", 20,250, "")
+		RegisterParameterBool("ct" & i & "Copy", "  Copy Plugin" , false)
+		RegisterParameterString("ct" & i & "Property", "  Property:", "field_id", 20,250, "")
+		RegisterRadioButton("ct" & i & "PropType", "   Property process Name:", 0, ChType)
+		RegisterParameterDouble("ct" & i & "PropNumber", "   Increase value:", 0, -5000, 5000)
+		RegisterParameterString("ct" & i & "Find", "  Find:", "_01", 20,250, "")
+		RegisterParameterString("ct" & i & "Replace", "  Replace with:", "_##", 20,250, "")
+	Next
+
+	'Director
+'	RegisterSpacer("spaceDirectors", 20)	
+	RegisterParameterBool("chgDirector", "** DIRECTOR **", false)
+	RegisterParameterBool("AnimationDupl", "  Duplicate Animation", false)
+	RegisterRadioButton("DirChannelNameOptions", "  Use Channel Name:", 0, KFChOptions)
+	RegisterParameterString("DirChannelName", "  Channel Name:", "", 20,250, "")
+	RegisterParameterBool("DirCreate", "  Create Director", false)
+	RegisterParameterString("DirFind", "  Find:", "_01", 20,250, "")
+	RegisterParameterString("DirReplace", "  Replace with:", "_##", 20,250, "")
+	RegisterParameterDouble("DirOffset", "  Increase offset to Directory:", 0, -5000, 5000)
+	RegisterParameterBool("DirEvents", "  Duplicate Stop points:", true)
+	RegisterParameterString("DirKFFind", "  Stop Point Find in Name:", "_01", 20,250, "")
+	RegisterParameterString("DirKFReplace", "  Stop Point Replace with:", "_##", 20,250, "")
+
+
+	'Director's AK
+	RegisterParameterBool("chgDirectorAK", "  Duplicate all Action KeyFrames:", false)
+	RegisterParameterBool("chgDirectorAKDelete", "  Delete All Action KeyFrames:", false)
+	For i=1 to NumActionKeyFrames
+		RegisterParameterBool("DirAK" & i, "  Change Action Keyframe " & i, false)
+		RegisterParameterString("DirAK" & i & "Name", "    AK" & i & " AK Name:", "", 20,250, "")
+		RegisterParameterString("DirAK" & i & "FindName", "    AK" & i & " Find in Name:", "", 20,250, "")
+		RegisterParameterString("DirAK" & i & "ReplaceName", "    AK" & i & " Replace with:", "", 20,250, "")
+		RegisterParameterString("DirAK" & i & "FindAction", "    AK" & i & " Find in Action:", "", 20,250, "")
+		RegisterParameterString("DirAK" & i & "ReplaceAction", "    AK" & i & " Replace with:", "", 20,250, "")
+	Next
+
+	'KeyFrames
+	KFChOptions.push "Find in the Director"
+
+'	RegisterSpacer("spaceKeyframes", 20)	
+	RegisterParameterBool("chgKeyFrames", "** KEYFRAMES **", false)
+	For kf=1 to NumKeyFrames
+		RegisterParameterBool("chgKeyFrame" & kf, "Keyframe " & kf, false)
+
+		RegisterRadioButton("KF" & kf & "ChannelNameOptions", "KF" & kf & " Use Channel Name:", 0, KFChOptions)
+		RegisterParameterString("KF" & kf & "ChannelName", "Channel Name:", "", 20,250, "")
+		RegisterRadioButton("KF" & kf & "FindBy", "KF" & kf & " Find:", 0, KFNameOptions)
+		RegisterParameterString("KF" & kf & "ByName", "    Name:", "", 20,250, "")
+		RegisterParameterInt("KF" & kf & "ByPos", "    Channel Position:", 1, 0, 99999)
+		RegisterParameterString("KF" & kf & "NameFind", "KF" & kf & " Find in Name:", "", 20,250, "")
+		RegisterParameterString("KF" & kf & "NameReplace", "KF" & kf & " Replace with:", "", 20,250, "")
+		RegisterParameterDouble("KF" & kf & "IncTime", "KF" & kf & " Increase Time (seconds):", 0, -5000, 5000)
+		RegisterParameterDouble("KF" & kf & "IncPause", "KF" & kf & " Increase Pause Length:", 0, -5000, 5000)
+		RegisterParameterDouble("KF" & kf & "IncFloat", "KF" & kf & " Increase Float value:", 0, -5000, 5000)
+		RegisterParameterInt("KF" & kf & "IncInt", "KF" & kf & " Increase Int value:", 0, -5000, 5000)
+		RegisterParameterDouble("KF" & kf & "IncX", "KF" & kf & " Increase Vertex value X:", 0, -5000, 5000)
+		RegisterParameterDouble("KF" & kf & "IncY", "KF" & kf & " Increase Vertex value Y:", 0, -5000, 5000)
+		RegisterParameterDouble("KF" & kf & "IncZ", "KF" & kf & " Increase Vertex value Z:", 0, -5000, 5000)
+		RegisterParameterString("KF" & kf & "ActionFind", "KF" & kf & " Find in Action:", "", 20,250, "")
+		RegisterParameterString("KF" & kf & "ActionReplace", "KF" & kf & " Replace in Action with:", "", 20,250, "")
+	Next
+End Sub
+
+Sub OnParameterChanged(parameterName As String)
+	if GetParameterBool("chgName") Then
+		SendGuiParameterShow("NameFind", SHOW)
+		SendGuiParameterShow("NameReplace", SHOW)
+		SendGuiParameterShow("chgText", SHOW)
+		if GetParameterBool("chgText") Then
+			SendGuiParameterShow("TextOriginal", SHOW)
+			SendGuiParameterShow("TextFind", SHOW)
+			SendGuiParameterShow("TextReplace", SHOW)
+		else
+			SendGuiParameterShow("TextOriginal", HIDE)
+			SendGuiParameterShow("TextFind", HIDE)
+			SendGuiParameterShow("TextReplace", HIDE)
+		end if
+		SendGuiParameterShow("cNewContainer", SHOW)
+		if GetParameterBool("cNewContainer") Then
+			SendGuiParameterShow("cReplaceAllChildren", HIDE)
+		else
+			SendGuiParameterShow("cReplaceAllChildren", SHOW)
+		end if
+		SendGuiParameterShow("chgTrans", SHOW)
+		if GetParameterBool("chgTrans") Then
+			SendGuiParameterShow("TransOriginal", SHOW)
+			For i=1 to NumTrans
+				if i = 1 then 
+					SendGuiParameterShow("chgCProp" & i, SHOW)
+				else
+					if GetParameterBool("chgCProp" & i-1) Then
+						SendGuiParameterShow("chgCProp" & i, SHOW)
+					else
+						SendGuiParameterShow("chgCProp" & i, HIDE)
+					end if
+				end if
+				if GetParameterBool("chgCProp" & i) Then
+					SendGuiParameterShow("ct" & i & "CPropName", SHOW)
+					SendGuiParameterShow("ct" & i & "CPropType", SHOW)
+					SendGuiParameterShow("ct" & i & "CPropName", SHOW)
+					if GetParameterInt("ct" & i & "CPropType") = 1 Then
+						SendGuiParameterShow("ct" & i & "CPropNumber", SHOW)
+						SendGuiParameterShow("ct" & i & "CPropTextFind", HIDE)
+						SendGuiParameterShow("ct" & i & "CPropTextReplace", HIDE)
+					elseif GetParameterInt("ct" & i & "CPropType") = 2 Then
+						SendGuiParameterShow("ct" & i & "CPropNumber", HIDE)
+						SendGuiParameterShow("ct" & i & "CPropTextFind", SHOW)
+						SendGuiParameterShow("ct" & i & "CPropTextReplace", SHOW)
+					else
+						SendGuiParameterShow("ct" & i & "CPropNumber", HIDE)
+						SendGuiParameterShow("ct" & i & "CPropTextFind", HIDE)
+						SendGuiParameterShow("ct" & i & "CPropTextReplace", HIDE)
+					end if
+				else
+					SendGuiParameterShow("ct" & i & "CPropName", HIDE)
+					SendGuiParameterShow("ct" & i & "CPropType", HIDE)
+					SendGuiParameterShow("ct" & i & "CPropName", HIDE)
+					SendGuiParameterShow("ct" & i & "CPropNumber", HIDE)
+					SendGuiParameterShow("ct" & i & "CPropTextFind", HIDE)
+					SendGuiParameterShow("ct" & i & "CPropTextReplace", HIDE)
+				end if
+			Next
+		else
+			SendGuiParameterShow("TransOriginal", HIDE)
+			For i=1 to NumTrans
+				SendGuiParameterShow("chgCProp" & i, HIDE)
+				SendGuiParameterShow("ct" & i & "CPropName", HIDE)
+				SendGuiParameterShow("ct" & i & "CPropType", HIDE)
+				SendGuiParameterShow("ct" & i & "CPropName", HIDE)
+				SendGuiParameterShow("ct" & i & "CPropNumber", HIDE)
+				SendGuiParameterShow("ct" & i & "CPropTextFind", HIDE)
+				SendGuiParameterShow("ct" & i & "CPropTextReplace", HIDE)
+			Next
+		end if
+	else
+		SendGuiParameterShow("NameFind", HIDE)
+		SendGuiParameterShow("NameReplace", HIDE)
+		SendGuiParameterShow("chgText", HIDE)
+		SendGuiParameterShow("TextOriginal", HIDE)
+		SendGuiParameterShow("TextFind", HIDE)
+		SendGuiParameterShow("TextReplace", HIDE)
+		SendGuiParameterShow("cReplaceAllChildren", HIDE)
+		SendGuiParameterShow("cNewContainer", HIDE)
+		SendGuiParameterShow("chgTrans", HIDE)
+		SendGuiParameterShow("TransOriginal", HIDE)
+		For i=1 to NumTrans
+			SendGuiParameterShow("chgCProp" & i, HIDE)
+			SendGuiParameterShow("ct" & i & "CPropName", HIDE)
+			SendGuiParameterShow("ct" & i & "CPropType", HIDE)
+			SendGuiParameterShow("ct" & i & "CPropName", HIDE)
+			SendGuiParameterShow("ct" & i & "CPropNumber", HIDE)
+			SendGuiParameterShow("ct" & i & "CPropTextFind", HIDE)
+			SendGuiParameterShow("ct" & i & "CPropTextReplace", HIDE)
+		Next
+	end if
+
+	if GetParameterBool("chgControls") Then
+		For i=1 to NumKeyControls
+			if i = 1 then 
+				SendGuiParameterShow("chgControl" & i, SHOW)
+			else
+				if GetParameterBool("chgControl" & i-1) Then
+					SendGuiParameterShow("chgControl" & i, SHOW)
+				else
+					SendGuiParameterShow("chgControl" & i, HIDE)
+				end if
+			end if
+			if GetParameterBool("chgControl" & i) Then
+				SendGuiParameterShow("ct" & i & "Type", SHOW)
+				if GetParameterInt("ct" & i & "Type") = 0 Then
+					SendGuiParameterShow("ct" & i & "TypeOther", SHOW)
+				else
+					SendGuiParameterShow("ct" & i & "TypeOther", HIDE)
+				end if
+				SendGuiParameterShow("ct" & i & "Copy", SHOW)
+				SendGuiParameterShow("ct" & i & "Property", SHOW)
+				SendGuiParameterShow("ct" & i & "PropType", SHOW)
+				if GetParameterInt("ct" & i & "PropType") = 1 Then
+					SendGuiParameterShow("ct" & i & "PropNumber", SHOW)
+					SendGuiParameterShow("ct" & i & "Find", HIDE)
+					SendGuiParameterShow("ct" & i & "Replace", HIDE)
+				elseif GetParameterInt("ct" & i & "PropType") = 2 Then
+					SendGuiParameterShow("ct" & i & "PropNumber", HIDE)
+					SendGuiParameterShow("ct" & i & "Find", SHOW)
+					SendGuiParameterShow("ct" & i & "Replace", SHOW)
+				else
+					SendGuiParameterShow("ct" & i & "PropNumber", HIDE)
+					SendGuiParameterShow("ct" & i & "Find", HIDE)
+					SendGuiParameterShow("ct" & i & "Replace", HIDE)
+				end if
+			else
+				SendGuiParameterShow("ct" & i & "Type", HIDE)
+				SendGuiParameterShow("ct" & i & "TypeOther", HIDE)
+				SendGuiParameterShow("ct" & i & "Copy", HIDE)
+				SendGuiParameterShow("ct" & i & "Property", HIDE)
+				SendGuiParameterShow("ct" & i & "PropType", HIDE)
+				SendGuiParameterShow("ct" & i & "PropNumber", HIDE)
+				SendGuiParameterShow("ct" & i & "Find", HIDE)
+				SendGuiParameterShow("ct" & i & "Replace", HIDE)
+			end if
+		Next
+	else
+		For i=1 to NumKeyControls
+			SendGuiParameterShow("chgControl" & i, HIDE)
+			SendGuiParameterShow("ct" & i & "Type", HIDE)
+			SendGuiParameterShow("ct" & i & "TypeOther", HIDE)
+			SendGuiParameterShow("ct" & i & "Copy", HIDE)
+			SendGuiParameterShow("ct" & i & "Property", HIDE)
+			SendGuiParameterShow("ct" & i & "PropType", HIDE)
+			SendGuiParameterShow("ct" & i & "PropNumber", HIDE)
+			SendGuiParameterShow("ct" & i & "Find", HIDE)
+			SendGuiParameterShow("ct" & i & "Replace", HIDE)
+		Next
+	end if
+	
+	if GetParameterBool("chgDirector") Then
+		SendGuiParameterShow("DirChannelNameOptions", SHOW)
+		if GetParameterBool("DirChannelNameOptions") Then
+			SendGuiParameterShow("DirChannelName", SHOW)
+		else
+			SendGuiParameterShow("DirChannelName", HIDE)
+		end if
+		SendGuiParameterShow("DirCreate", SHOW)
+		SendGuiParameterShow("AnimationDupl", SHOW)
+		SendGuiParameterShow("DirFind", SHOW)
+		SendGuiParameterShow("DirReplace", SHOW)
+		if GetParameterBool("DirCreate") Then
+			SendGuiParameterShow("DirOffset", SHOW)
+			SendGuiParameterShow("DirEvents", SHOW)
+			SendGuiParameterShow("chgDirectorAK", SHOW)
+			if GetParameterBool("DirEvents") Then
+				SendGuiParameterShow("DirKFFind", SHOW)
+				SendGuiParameterShow("DirKFReplace", SHOW)
+			else
+				SendGuiParameterShow("DirKFFind", HIDE)
+				SendGuiParameterShow("DirKFReplace", HIDE)
+			end if
+			if GetParameterBool("chgDirectorAK") Then
+				SendGuiParameterShow("chgDirectorAKDelete", SHOW)
+				For i=1 to NumKeyFrames
+					if i=1 Then
+						SendGuiParameterShow("DirAK" & i, SHOW)
+					else
+						if GetParameterBool("DirAK" & i-1) Then
+							SendGuiParameterShow("DirAK" & i, SHOW)
+						else
+							SendGuiParameterShow("DirAK" & i, HIDE)
+						end if
+					end if
+					if GetParameterBool("DirAK" & i) Then
+						SendGuiParameterShow("DirAK" & i & "Name", SHOW)
+						SendGuiParameterShow("DirAK" & i & "FindName", SHOW)
+						SendGuiParameterShow("DirAK" & i & "ReplaceName", SHOW)
+						SendGuiParameterShow("DirAK" & i & "FindAction", SHOW)
+						SendGuiParameterShow("DirAK" & i & "ReplaceAction", SHOW)
+					else
+						SendGuiParameterShow("DirAK" & i & "Name", HIDE)
+						SendGuiParameterShow("DirAK" & i & "FindName", HIDE)
+						SendGuiParameterShow("DirAK" & i & "ReplaceName", HIDE)
+						SendGuiParameterShow("DirAK" & i & "FindAction", HIDE)
+						SendGuiParameterShow("DirAK" & i & "ReplaceAction", HIDE)
+					end if
+				Next
+			end if
+		else
+			SendGuiParameterShow("DirOffset", HIDE)
+			SendGuiParameterShow("DirEvents", HIDE)
+			SendGuiParameterShow("chgDirectorAK", HIDE)
+			SendGuiParameterShow("DirKFFind", HIDE)
+			SendGuiParameterShow("DirKFReplace", HIDE)
+			SendGuiParameterShow("chgDirectorAKDelete", HIDE)
+			For i=1 to NumActionKeyFrames
+				SendGuiParameterShow("DirAK" & i, HIDE)
+				SendGuiParameterShow("DirAK" & i & "Name", HIDE)
+				SendGuiParameterShow("DirAK" & i & "FindName", HIDE)
+				SendGuiParameterShow("DirAK" & i & "ReplaceName", HIDE)
+				SendGuiParameterShow("DirAK" & i & "FindAction", HIDE)
+				SendGuiParameterShow("DirAK" & i & "ReplaceAction", HIDE)
+			Next
+		end if
+	else
+		SendGuiParameterShow("chgDirectorAK", HIDE)
+		SendGuiParameterShow("DirChannelNameOptions", HIDE)
+		SendGuiParameterShow("DirChannelName", HIDE)
+		SendGuiParameterShow("DirCreate", HIDE)
+		SendGuiParameterShow("AnimationDupl", HIDE)
+		SendGuiParameterShow("DirFind", HIDE)
+		SendGuiParameterShow("DirReplace", HIDE)
+		SendGuiParameterShow("DirOffset", HIDE)
+		SendGuiParameterShow("DirEvents", HIDE)
+		SendGuiParameterShow("DirKFFind", HIDE)
+		SendGuiParameterShow("DirKFReplace", HIDE)
+		SendGuiParameterShow("chgDirectorAKDelete", HIDE)
+		For i=1 to NumActionKeyFrames
+			SendGuiParameterShow("DirAK" & i, HIDE)
+			SendGuiParameterShow("DirAK" & i & "Name", HIDE)
+			SendGuiParameterShow("DirAK" & i & "Pos", HIDE)
+			SendGuiParameterShow("DirAK" & i & "FindName", HIDE)
+			SendGuiParameterShow("DirAK" & i & "ReplaceName", HIDE)
+			SendGuiParameterShow("DirAK" & i & "FindAction", HIDE)
+			SendGuiParameterShow("DirAK" & i & "ReplaceAction", HIDE)
+		Next
+	end if	
+		
+	if GetParameterBool("chgKeyFrames") Then
+		For kf=1 to NumKeyFrames
+			if kf=1 Then
+				SendGuiParameterShow("chgKeyFrame" & kf, SHOW)
+			else
+				if GetParameterBool("chgKeyFrame" & kf-1) Then
+					SendGuiParameterShow("chgKeyFrame" & kf, SHOW)
+				else
+					SendGuiParameterShow("chgKeyFrame" & kf, HIDE)
+				end if
+			end if
+			if GetParameterBool("chgKeyFrame" & kf) Then
+				SendGuiParameterShow("KF" & kf & "ChannelNameOptions", SHOW)
+				SendGuiParameterShow("KF" & kf & "FindBy", SHOW)
+				if GetParameterInt("KF" & kf & "ChannelNameOptions") = 1 Then
+					SendGuiParameterShow("KF" & kf & "ChannelName", SHOW)
+				else
+					SendGuiParameterShow("KF" & kf & "ChannelName", HIDE)
+				end if
+				if GetParameterInt("KF" & kf & "FindBy") = 0 Then
+					SendGuiParameterShow("KF" & kf & "ByName", HIDE)
+					SendGuiParameterShow("KF" & kf & "ByPos", SHOW)
+				else
+					SendGuiParameterShow("KF" & kf & "ByPos", HIDE)
+					SendGuiParameterShow("KF" & kf & "ByName", SHOW)
+				end if
+				SendGuiParameterShow("KF" & kf & "NameFind", SHOW)
+				SendGuiParameterShow("KF" & kf & "NameReplace", SHOW)
+				SendGuiParameterShow("KF" & kf & "IncTime", SHOW)
+				SendGuiParameterShow("KF" & kf & "IncPause", SHOW)
+				SendGuiParameterShow("KF" & kf & "IncFloat", SHOW)
+				SendGuiParameterShow("KF" & kf & "IncInt", SHOW)
+				SendGuiParameterShow("KF" & kf & "IncX", SHOW)
+				SendGuiParameterShow("KF" & kf & "IncY", SHOW)
+				SendGuiParameterShow("KF" & kf & "IncZ", SHOW)
+				SendGuiParameterShow("KF" & kf & "ActionFind", SHOW)
+				SendGuiParameterShow("KF" & kf & "ActionReplace", SHOW)
+			else
+				SendGuiParameterShow("KF" & kf & "ChannelNameOptions", HIDE)
+				SendGuiParameterShow("KF" & kf & "ChannelName", HIDE)
+				SendGuiParameterShow("KF" & kf & "FindBy", HIDE)
+				SendGuiParameterShow("KF" & kf & "ByName", HIDE)
+				SendGuiParameterShow("KF" & kf & "ByPos", HIDE)
+				SendGuiParameterShow("KF" & kf & "NameFind", HIDE)
+				SendGuiParameterShow("KF" & kf & "NameReplace", HIDE)
+				SendGuiParameterShow("KF" & kf & "IncTime", HIDE)
+				SendGuiParameterShow("KF" & kf & "IncPause", HIDE)
+				SendGuiParameterShow("KF" & kf & "IncFloat", HIDE)
+				SendGuiParameterShow("KF" & kf & "IncInt", HIDE)
+				SendGuiParameterShow("KF" & kf & "IncX", HIDE)
+				SendGuiParameterShow("KF" & kf & "IncY", HIDE)
+				SendGuiParameterShow("KF" & kf & "IncZ", HIDE)
+				SendGuiParameterShow("KF" & kf & "ActionFind", HIDE)
+				SendGuiParameterShow("KF" & kf & "ActionReplace", HIDE)
+			end if
+		Next
+	else
+		For kf=1 to NumKeyFrames
+			SendGuiParameterShow("chgKeyFrame" & kf, HIDE)
+			SendGuiParameterShow("KF" & kf & "ChannelNameOptions", HIDE)
+			SendGuiParameterShow("KF" & kf & "FindBy", HIDE)
+			SendGuiParameterShow("KF" & kf & "ChannelName", HIDE)
+			SendGuiParameterShow("KF" & kf & "ByName", HIDE)
+			SendGuiParameterShow("KF" & kf & "ByPos", HIDE)
+
+			SendGuiParameterShow("KF" & kf & "NameFind", HIDE)
+			SendGuiParameterShow("KF" & kf & "NameReplace", HIDE)
+			SendGuiParameterShow("KF" & kf & "IncTime", HIDE)
+			SendGuiParameterShow("KF" & kf & "IncPause", HIDE)
+			SendGuiParameterShow("KF" & kf & "IncFloat", HIDE)
+			SendGuiParameterShow("KF" & kf & "IncInt", HIDE)
+			SendGuiParameterShow("KF" & kf & "IncX", HIDE)
+			SendGuiParameterShow("KF" & kf & "IncY", HIDE)
+			SendGuiParameterShow("KF" & kf & "IncZ", HIDE)
+			SendGuiParameterShow("KF" & kf & "ActionFind", HIDE)
+			SendGuiParameterShow("KF" & kf & "ActionReplace", HIDE)
+		Next
+	end if
+End Sub

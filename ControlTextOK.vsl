@@ -1,0 +1,10 @@
+sub OnInitPlugin()
+	RegisterPlugin("ControlTextOK")
+	RegisterPluginFolder("MRubio")
+end sub
+
+sub OnInit()
+	Dim ct as PluginInstance = CreateFunction("BUILT_IN*FUNCTION*ControlText")
+	ct.SetParameterBool("richtext", false)
+	DeleteFunction("ControlTextOK")
+end sub

@@ -1,0 +1,31 @@
+Dim Title as String = "MRubio Set Image from Container v1.0.0"
+
+sub OnInitPlugin()
+	RegisterPlugin("SetImage")
+	RegisterPluginFolder("MRubio")
+end sub
+
+sub OnInitParameters()
+	RegisterInfoText(Title & "\n\nGets an Image from a container, not from the GH and set to the actual container")
+	RegisterParameterString("ImageName", "Image Name:", "", 30, 500, "")
+	RegisterParameterBool("remove", "Remove Path:", false)
+	RegisterParameterString("prefix", "Prefix:", "", 30, 500, "")
+	RegisterParameterString("sufix", "Sufix:", "", 30, 500, "")
+	RegisterParameterContainer("parent", "Source Container")
+end sub
+
+Sub OnParameterChanged(parameterName As String)
+	ActualizarDatos()
+End Sub
+
+Sub ActualizarDatos()
+	Dim pContainer = GetParameterContainer("parent")
+	Dim strName as string = GetParameterString("ImageName")
+	if GetParameterBool("remove") Then strName = strName.GetSubstring(strName.FindLastOf("/"), strName.Length)
+	Println strName
+	Dim NewName as String = GetParameterString("prefix") &  strName &  GetParameterString("sufix")
+	Dim nContainer as Container = pContainer.FindSubContainer(NewName)
+	if nContainer <> null then
+		This.Texture.Image = nContainer.Texture.Image
+	end if
+End Sub

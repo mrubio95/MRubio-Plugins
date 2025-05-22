@@ -1,0 +1,171 @@
+sub OnInitPlugin()
+	RegisterPlugin("StopPointsManager")
+	RegisterPluginFolder("MRubio")
+end sub
+
+Dim Title as String = "MRubio Stop Points Manager v.1.0.1"
+Dim NewIndex as Integer
+
+Sub OnInitParameters()
+	RegisterPluginVersion(1, 0, 0)
+	RegisterInfoText(Title & "\n\n
+Use # in the Replace field to set the right number")
+
+	RegisterParameterInt("numCopies", "Numer of Copies:", 2, 0, 100)
+	RegisterParameterInt("index", "Start Index:", 1, 0, 99999)
+
+	RegisterParameterString("NameFind", " Name:", "KF_#", 20,250, "")
+	RegisterParameterDouble("Time", " Default Time (seconds):", 0, -5000, 5000)
+	RegisterParameterDouble("IncTime", " Increase Time (seconds):", 0, -5000, 5000)
+	Dim StopType As Array[String]
+	StopType.push "(ignore)"
+	StopType.push "Stop"
+	StopType.push "Tag"
+	StopType.push "Local Stop"
+	StopType.push "Pause"
+	RegisterRadioButton("Type", " Type:", 0, StopType)
+	RegisterParameterDouble("Pause", " Pause:", 0, -5000, 5000)
+	RegisterParameterDouble("IncPause", " Increase Pause:", 0, -5000, 5000)
+
+
+	Dim DirType As Array[String]
+	DirType.push "(ignore)"
+	DirType.push "Both"
+	DirType.push "Normal"
+	DirType.push "Reverse"
+	RegisterRadioButton("Direction", " Type:", 0, DirType)
+
+	RegisterPushButton("btnDelete", "Delete StopPoints", 3)
+	RegisterPushButton("btnCreate", "Create StopPoints", 1)
+	RegisterPushButton("btnUpdate", "Update StopPoints", 2)
+
+'	RegisterPushButton("test", "  TESTS  ", 4)
+	RegisterParameterBool("debug", "Debug:", false)
+End Sub
+
+Sub OnParameterChanged(parameterName As String)
+	if GetParameterInt("Type") = 4 Then
+		SendGuiParameterShow("Pause", SHOW)
+		SendGuiParameterShow("IncPause", SHOW)
+	else
+		SendGuiParameterShow("Pause", HIDE)
+		SendGuiParameterShow("IncPause", HIDE)
+	end if
+End Sub
+
+Sub LOG(msg as string)
+	if GetParameterBool("debug") Then println 9, msg
+End Sub
+
+Function CreateNewName(ByVal find as String) as String
+	LOG  "-----CreateNewName1:" & find & " index:" & NewIndex
+	Dim IndexPos as Integer = find.Find("#")
+	Dim rep as String = find
+	if IndexPos > -1 Then
+		'Get the number of #
+		Dim indexcon as Integer = 1
+		Do while find.GetSubstring(IndexPos+indexcon, 1) = "#"
+			indexcon = indexcon + 1
+		Loop
+		Dim replaceRightSide as String = find.GetSubstring(IndexPos+indexcon, find.Length-(IndexPos+indexcon))
+		Dim TempName as String = find
+		Dim NewNumber as String = CStr(NewIndex)
+		if NewNumber.Length < indexcon Then  NewNumber = IntToString(NewIndex, indexcon, true)
+		rep = TempName.Left(IndexPos) & NewNumber & replaceRightSide
+	end if
+	CreateNewName = rep
+	LOG  "-----CreateNewName2:" & rep
+End Function
+
+Function CalculateNewValue(orig as Double, Increase as Double) as Double
+    CalculateNewValue = orig + ((NewIndex-GetParameterInt("index")+1) * CDbl(Increase))
+End Function
+
+Sub OnExecAction(buttonId As Integer)
+	Dim d as Director = this.GetDirector
+	if d <> null Then
+		if buttonId = 3 then
+			Dim total = d.EventChannel.KeyframeCount - 1 
+			for i=0 to total
+				d.EventChannel.DeleteKeyframe(0)
+			next
+		end if
+
+		if buttonId = 1 then
+			'Create Keyframes
+		NewIndex = GetParameterInt("index")
+			For i=1 to GetParameterInt("numCopies")
+				Dim nTime as Double = i
+				if GetParameterDouble("Time") > 0 or GetParameterDouble("IncTime") <> 0 then
+					nTime = CalculateNewValue(GetParameterDouble("Time"), GetParameterDouble("IncTime"))
+				end if
+				d.EventChannel.AddKeyframe(nTime)
+				NewIndex = NewIndex + 1
+			Next
+		end if
+
+		if buttonId = 1 or buttonId = 2  then
+			UpdatingKeyFrames()
+			UpdatingKeyFrames()
+			UpdatingKeyFrames()
+		end if
+	end if
+End sub
+
+Sub UpdatingKeyFrames()
+	Dim AllKF as Array[Keyframe]
+	Dim ActionCH as Channel = this.GetDirector().EventChannel
+
+	if GetParameterDouble("Time") > 0 or GetParameterDouble("IncTime") <> 0 then
+		NewIndex = GetParameterInt("index")
+		For nKF = 0 to ActionCH.KeyframeCount -1
+			Dim NextKF as Keyframe = ActionCH.GetKeyframe(nKF)
+			NextKF.Time = CalculateNewValue(GetParameterDouble("Time"), GetParameterDouble("IncTime"))
+			NewIndex = NewIndex + 1
+		Next
+	end if
+
+	ActionCH = this.GetDirector().EventChannel
+	NewIndex = GetParameterInt("index")
+	For nKF = 0 to ActionCH.KeyframeCount -1
+		Dim NextKF as Keyframe = ActionCH.GetKeyframe(nKF)
+		LOG "Updating KF1 " & nKF & " - " & NextKF.Name
+		if GetParameterString("NameFind") <> "" Then
+			NextKF.Name = CreateNewName(GetParameterString("NameFind"))
+		end if
+		LOG "Updating KF2 " & nKF & " - " & NextKF.Name
+
+		if GetParameterInt("Type") > 0 then
+			Dim NewState as String
+			if GetParameterInt("Type") = 1 then
+				NewState = "STOP"
+			elseif GetParameterInt("Type") = 2 then
+				NewState = "TAG"
+			elseif GetParameterInt("Type") = 3 then
+				NewState = "LOCAL_STOP"
+			elseif GetParameterInt("Type") = 4 then
+				NewState = "PAUSE"
+			end if
+			System.SendCommand("#" & NextKF.VizId & "*VALUE SET " & NewState)
+
+			if GetParameterInt("Type") = 4 Then
+				Dim NewPause = CalculateNewValue(GetParameterDouble("Pause"), GetParameterDouble("IncPause"))
+				System.SendCommand("#" & NextKF.VizId & "*PAUSE_LENGTH SET " & NewPause)
+			end if
+		end if
+
+		if GetParameterInt("Direction") > 0 then
+			Dim NewDir as String
+			if GetParameterInt("Direction") = 1 then
+				NewDir = "BOTH"
+			elseif GetParameterInt("Direction") = 2 then
+				NewDir = "NORMAL"
+			elseif GetParameterInt("Direction") = 3 then
+				NewDir = "REVERSE"
+			end if
+			System.SendCommand("#" & NextKF.VizId & "*DIRECTION SET " & NewDir)
+		end if
+
+		NewIndex = NewIndex + 1
+	Next
+End sub
