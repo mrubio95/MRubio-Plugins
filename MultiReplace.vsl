@@ -1,0 +1,260 @@
+Dim Title as String = "MRubio MultiReplace v.1.0.11"
+Dim TransfProp as Array[String]
+Dim TextureProp as Array[String]
+Dim FontProp as Array[String]
+Dim MatProp as Array[String]
+
+sub InitArrays()
+    'Transformation Properties to Copy
+    TransfProp.push("POSITION*X")
+    TransfProp.push("POSITION*Y")
+    TransfProp.push("POSITION*Z")
+    TransfProp.push("ROTATION*X")
+    TransfProp.push("ROTATION*Y")
+    TransfProp.push("ROTATION*Z")
+    TransfProp.push("SCALING*X")
+    TransfProp.push("SCALING*Y")
+    TransfProp.push("SCALING*Z")
+    TransfProp.push("CENTER*X")
+    TransfProp.push("CENTER*Y")
+    TransfProp.push("CENTER*Z")
+    TransfProp.push("ROTATION_ORDER")
+
+    'Texture Properties to Copy
+    TextureProp.push("IMAGE2")
+    TextureProp.push("WRAP")
+    TextureProp.push("DISPLAY_COMPONENT")
+    TextureProp.push("CONSTANT_COLOR")
+    TextureProp.push("POSITION")
+    TextureProp.push("CENTER")
+    TextureProp.push("ROTATION")
+    TextureProp.push("SCALING")
+    TextureProp.push("MAPPING")
+    TextureProp.push("GENMAP_POSITION")
+    TextureProp.push("GENMAP_ROTATION")
+    TextureProp.push("UNIT")
+    TextureProp.push("INHERITABLE")
+    TextureProp.push("QUALITY")
+    TextureProp.push("EFFECT_VALUE")
+    TextureProp.push("SHARPEN_VALUE")
+    TextureProp.push("EFFECT_TYPE")
+    TextureProp.push("ANISOTROPY")
+    TextureProp.push("COMPRESSION")
+    TextureProp.push("ENVIRONMENT")
+    TextureProp.push("BLEND_FACTOR")
+    TextureProp.push("SOURCE_UNIT")
+    TextureProp.push("STEREO_MODE")
+
+    'Font Prop
+    FontProp.push("TEXT_FROM_GUI")
+    FontProp.push("FONT")
+    FontProp.push("KERNING")
+    FontProp.push("WORD_SPACING")
+    FontProp.push("LINE_SPACING")
+    FontProp.push("UNDERLINE_TYPE")
+    FontProp.push("UNDERLINE")
+    FontProp.push("UNDERLINE_SIZE")
+    FontProp.push("TEXT_TYPE")
+    FontProp.push("QUALITY")
+    FontProp.push("DETAIL")
+    FontProp.push("SHARPEN")
+    FontProp.push("ANISOTROPY")
+    FontProp.push("ORIENTATION")
+    FontProp.push("CHAR")
+    FontProp.push("VERTICAL_ORIENTATION")
+    FontProp.push("TBOX*STATE")
+    FontProp.push("TBOX*ANYCHAR")
+    FontProp.push("TBOX*SCALING")
+    FontProp.push("TBOX*WIDTH")
+    FontProp.push("TBOX*HEIGHT")
+    FontProp.push("DROP_SHADOW")
+    FontProp.push("DROP_SHADOW*FONT")
+    FontProp.push("DROP_SHADOW*DIRECTION")
+    FontProp.push("DROP_SHADOW*DISTANCE")
+    FontProp.push("DROP_SHADOW*Z_OFFSET")
+    FontProp.push("DROP_SHADOW*MATERIAL*ALPHA")
+    FontProp.push("DROP_SHADOW*DROP_SHADOW*MATERIAL*COLOR")
+    FontProp.push("DROP_SHADOW*TEXT_TYPE")
+    FontProp.push("DROP_SHADOW*QUALITY")
+    FontProp.push("DROP_SHADOW*SHARPEN")
+    FontProp.push("DROP_SHADOW*ANISOTROPY")
+    'Clocks will not be updated
+    'Special will not be updated
+
+
+    MatProp.push("ENLIGHTED")
+    MatProp.push("COLOR")
+    MatProp.push("ALPHA")
+    MatProp.push("AMBIENT")
+    MatProp.push("DIFFUSE")
+    MatProp.push("SPECULAR")
+    MatProp.push("EMISSION")
+    MatProp.push("SHININESS")
+end sub
+
+Function NormalizeParam(Prop as String) as String
+    Dim NewProp as String = Prop
+    if NewProp.Find("*") > 0 Then NewProp.ReplaceChar(NewProp.Find("*"), "-")
+    if NewProp.Find("*") > 0 Then NewProp.ReplaceChar(NewProp.Find("*"), "-")
+    NormalizeParam = NewProp
+End function
+
+sub OnInitPlugin()
+	RegisterPlugin("MultiReplace")
+	RegisterPluginFolder("MRubio")
+end sub
+
+Sub OnInitParameters()
+	InitArrays()
+	RegisterPluginVersion(1, 0, 11)
+	RegisterInfoText(Title & "\n
+This plugin will replace elements across multiple scenes in the GH
+Use it in with plugin MultiReplace-Param. Same version always!!
+
+NOTE:In this version change of Font type is not working from the script, but if you decompile it will work")
+
+	RegisterParameterString("GHPath", "GH Path Find:", "SCENE*Default", 20,250, "")
+	RegisterParameterBool("subfolders", "  Including SubFolders", false)
+
+	RegisterPushButton("execute", "  EXECUTE  ", 1)
+	RegisterPushButton("test", "  TEST  ", 2)
+	RegisterPushButton("clear", "CLEAR FRONT LAYER", 3)
+	RegisterParameterBool("debug", "Debug:", false)
+End Sub
+
+Sub LOG(msg as string)
+	if GetParameterBool("debug") Then println 9, msg
+End Sub
+
+Sub OnExecAction(buttonId As Integer)
+    InitArrays()
+	if buttonId = 1 then
+		'Each files in folder
+        Dim GHPath as String = GetParameterString("GHPath")
+        if Not GHPath.StartsWith("SCENE*") then GHPath = "SCENE*" & GHPath
+        Dim strFiles as String = System.SendCommand(GHPath & " GET")
+        Dim GHFiles As Array[String]
+        strFiles.TclSplit(GHFiles)
+        For each GHFile in GHFiles
+            ProcessScene GHFile
+        next
+        Println "\n\n---- PROCESS END ----\n\n"
+	elseif buttonId = 2 then
+        'TEST
+
+	elseif buttonId = 3 then
+        'Test Cargar escena en front
+        System.LoadFrontScene ""
+
+	elseif buttonId = 4 then
+
+    end if
+end sub
+
+Sub ProcessScene(SceneName as String)
+    LOG "ProcessScene " & SceneName
+
+    'Load in Front Layer
+    System.LoadFrontScene SceneName
+
+    if System.FrontScene = null then
+        LOG "ERROR - Scene " & SceneName & " could not be loaded"
+    else
+        UpdateAll System.FrontScene.RootContainer
+
+        'Save
+        LOG "ProcessScene SAVE #" & System.FrontScene.VizId
+        LOG SendCommand("SCENE SAVE #" & System.FrontScene.VizId)
+    end if
+
+    'Unload
+    System.LoadFrontScene ""
+End Sub
+
+Sub UpdateAll(c as Container)
+	if c <> null then 
+LOG "Checking to process container " &  c.Name
+        For Hijitos=0 To this.ChildContainerCount-1
+            Dim OriginalC as Container = this.GetChildContainerByIndex(Hijitos)
+            Dim plgProcess As PluginInstance = OriginalC.GetFunctionPluginInstance("MultiReplaceParam")
+            If plgProcess <> null then
+                Dim bOk as Boolean = false
+                if plgProcess.GetParameterString("cntName") <> "" Then
+                    if plgProcess.GetParameterInt("cntNamePrecision") = 1 Then
+                        bOK = c.Name.Match(plgProcess.GetParameterString("cntName"))
+                    else
+                        if c.Name = plgProcess.GetParameterString("cntName") Then bOK= true
+                    end if
+                end if
+                If bOK Then
+LOG "Container Name fits: " & c.Name & "-" &  plgProcess.GetParameterString("cntName")
+                    'Transformation
+                    If plgProcess.GetParameterBool("trf") Then
+LOG "  TRANSFORMATION"
+                        for each Prop In TransfProp
+                            if plgProcess.GetParameterBool("trf" & NormalizeParam(Prop)) then
+                                Dim strOrigen as String = System.SendCommand("#" & OriginalC.VizId & "*TRANSFORMATION*" & Prop & " GET")
+                    LOG "UPDATE PARAM TRANS " & Prop & "= "& strOrigen
+                                System.SendCommand("#" & c.VizId & "*TRANSFORMATION*" & Prop & " SET " & strOrigen)
+                            end if
+                        next
+                    End if
+                    
+                    'Texture
+                    If plgProcess.GetParameterBool("img") Then
+LOG "  TEXTURE"
+                        Dim strOrigen as String = System.SendCommand("#" & OriginalC.VizId & "*TEXTURE*IMAGE GET")
+                        if c.Texture = null then
+                            c.CreateTexture(strOrigen)
+                            LOG "CREATE IMAGE:" & strOrigen
+                        end if
+                        for each Prop In TextureProp
+                            if plgProcess.GetParameterBool("img" & NormalizeParam(Prop)) then
+                                strOrigen = System.SendCommand("#" & OriginalC.VizId & "*TEXTURE*" & Prop & " GET")
+                    LOG "UPDATE PARAM IMG " & Prop & "= "& strOrigen
+                                System.SendCommand("#" & c.VizId & "*TEXTURE*" & Prop & " SET " & strOrigen)
+                            end if
+                        next
+                   End if
+
+                    'Font
+                    If plgProcess.GetParameterBool("fnt") Then
+LOG "  FONT"
+                        if c.Geometry.Text <> null then
+                            for each Prop In FontProp
+'                    LOG " Font ok3 " & "fnt" & NormalizeParam(Prop) & "=" & plgProcess.GetParameterBool("fnt" & NormalizeParam(Prop))
+                                if plgProcess.GetParameterBool("fnt" & NormalizeParam(Prop)) then
+                                    Dim strOrigen as String = System.SendCommand("#" & OriginalC.VizId & "*GEOM*" & Prop & " GET")
+                        LOG "UPDATE PARAM FONT " & Prop & "= "& strOrigen
+                                    System.SendCommand("#" & c.VizId & "*GEOM*" & Prop & " SET " & strOrigen)
+                                end if
+                            next
+                        End if
+                    End if
+
+                    'Material
+                    If plgProcess.GetParameterBool("mat") Then
+LOG "  MATERIAL"
+                        if c.Material = null then
+                            c.CreateMaterial()
+                            LOG "MATERIAL CREATED"
+                        end if
+                        for each Prop In MatProp
+                            if plgProcess.GetParameterBool("mat" & NormalizeParam(Prop)) then
+                                Dim strOrigen as String = System.SendCommand("#" & OriginalC.VizId & "*MATERIAL*" & Prop & " GET")
+                    LOG "UPDATE PARAM MAT " & Prop & "= "& strOrigen
+                                System.SendCommand("#" & c.VizId & "*MATERIAL*" & Prop & " SET " & strOrigen)
+                            end if
+                        next
+                   End if
+                End if
+            End if
+        Next
+		
+		'Do to All the Childs
+		LOG "UpdateAll-" & c.ChildContainerCount-1
+		For i=0 to c.ChildContainerCount-1
+			UpdateAll c.GetChildContainerByIndex(i)
+		Next
+	end if
+end sub

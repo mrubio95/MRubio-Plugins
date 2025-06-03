@@ -7,10 +7,15 @@ Dim NumTrans as Integer = 6
 
 Dim NewIndex, ProcessFound as Integer
 Dim SubLevels as Array[Integer]
+Dim MainPath as String
 
 sub OnInitPlugin()
 	RegisterPlugin("MultiProcess")
 	RegisterPluginFolder("MRubio")
+end sub
+
+sub OnInit()
+	MainPath = System.SendCommand("#" & This.VizId & "*ABSOLUTE_PATH GET")
 end sub
 
 Sub OnInitParameters()
@@ -40,12 +45,18 @@ Use # in replace to add number or ## to add a number with 2 chars
 	RegisterParameterBool("debug", "Debug:", false)
 End Sub
 
-Sub LOG(msg as string)
-	if GetParameterBool("debug") Then println 9, msg
+Sub LOG(msg as string, bError as Boolean)
+	if GetParameterBool("debug") Then
+		if bError then
+			println 4, msg
+		else
+			println 9, msg
+		end if
+	end if
 End Sub
 
 Function CreateNewName(ByVal orig as String, ByVal find as String, ByVal replace as String) as String
-	LOG  "-----CreateNewName1:" & orig & " find:" & find & " replace:" & replace & " index:" & NewIndex
+	LOG  "-----CreateNewName1:" & orig & " find:" & find & " replace:" & replace & " index:" & NewIndex, false
 	Dim IndexPos as Integer = replace.Find("#")
 	Dim rep as String = replace
 	if IndexPos > -1 Then
@@ -69,7 +80,7 @@ Function CreateNewName(ByVal orig as String, ByVal find as String, ByVal replace
 		if TempName.Length > IndexPos + find.Length Then orig = orig & TempName.GetSubstring(IndexPos + find.Length, TempName.Length)
 	end if
 	CreateNewName = orig
-	LOG  "-----CreateNewName2:" & orig
+	LOG  "-----CreateNewName2:" & orig, false
 End Function
 
 Sub OnExecAction(buttonId As Integer)
@@ -77,7 +88,7 @@ Sub OnExecAction(buttonId As Integer)
 		SubLevels.Clear
 		
 		ProcessFound = 0
-		LOG "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n*** START ***"
+		LOG "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n*** START ***", false
 
 		'Create copies?
 		if GetParameterBool("Crea") Then
@@ -99,7 +110,7 @@ Sub OnExecAction(buttonId As Integer)
 		end if
 		UpdateAll this.ChildContainer
 
-		LOG "TOTAL of MultiProcessParam plugins found: " & ProcessFound
+		LOG "TOTAL of MultiProcessParam plugins found: " & ProcessFound, false
 	elseif buttonId = 2 then
 		'Do to All the Childs
 		For i=1 to this.ChildContainerCount-1
@@ -107,12 +118,10 @@ Sub OnExecAction(buttonId As Integer)
 			Recursive this.GetChildContainerByIndex(i), "**"
 		Next
 	elseif buttonId = 3 then
-		LOG "Delete all Multi Process Param plugins from ALL childs?"
+		LOG "Delete all Multi Process Param plugins from ALL childs?", false
 		SendGuiParameterShow("delete", SHOW)
 	elseif buttonId = 4 then
 '		TEST!!
-'		LOG "DIR1:" & Dir1.Name
-'		LOG "DIR2:" & Dir2.Name
 	end if
 	Scene.UpdateSceneTree()
 End Sub
@@ -120,16 +129,16 @@ End Sub
 Sub Recursive(c as Container, prefix as string)
 	if c <> null then 
 		println 3, prefix & "/" & c.Name
-		log "Hijos:" & c.ChildContainerCount
+		log "Hijos:" & c.ChildContainerCount, false
 
 		Dim NumChilds as Integer = c.ChildContainerCount - 1
 		For NumChilds = 0 To c.ChildContainerCount-1
 			Dim cNew as container = c.GetChildContainerByIndex(NumChilds)
 			Dim LevelString as String = ""
 			For subL=0 to SubLevels.UBound
-				LOG "Getting child:" & SubLevels[subL]
+				LOG "Getting child:" & SubLevels[subL], false
 				cNew = cNew.GetChildContainerByIndex(SubLevels[subL])
-				LOG cNew.name
+				LOG cNew.name, false
 				LevelString = LevelString & SubLevels[subL] & " / "
 			Next
 			if cNew = null then
@@ -142,7 +151,7 @@ Sub Recursive(c as Container, prefix as string)
 				SubLevels.Pop
 			end if
 		Next
-		log "SubLevels:" & SubLevels.Ubound
+		log "SubLevels:" & SubLevels.Ubound, false
 	end if
 end sub
 
@@ -150,7 +159,7 @@ Sub MoveChanels(c as Container, ByRef DestDir as Director)
 	if DestDir <> null then
 		Dim AllChannels as Array[Channel]
 		c.GetChannelsOfObject(AllChannels)
-		LOG "DIR ID:" & DestDir.VizId
+		LOG "DIR ID:" & DestDir.VizId, false
 		For Each myChannel in AllChannels
 			myChannel.MoveToDirector(DestDir)
 		Next
@@ -160,7 +169,7 @@ End Sub
 Sub ProcessContainer(OriginalC as Container)
 	Dim plgProcess As PluginInstance = OriginalC.GetFunctionPluginInstance("MultiProcessParam")
 	if plgProcess <> null then
-		LOG "--ProcessContainer " & GetFullNameC(OriginalC)
+		LOG "--ProcessContainer " & GetFullNameC(OriginalC), false
 		NewIndex = GetParameterInt("index")
 
 		For NumChilds = 1 To this.ChildContainerCount-1
@@ -172,31 +181,31 @@ Sub ProcessContainer(OriginalC as Container)
 
 			if plgProcess.GetParameterBool("cNewContainer") Then
 				'This is a new container, we will duplicate it in the same position...
-				LOG "---New Container will be created from " & OriginalC.Name
+				LOG "---New Container will be created from " & OriginalC.Name, false
 				For subL=0 to SubLevels.UBound-1
 					c = c.GetChildContainerByIndex(SubLevels[subL])
 				Next
 				if c = null then
-					LOG "ERROR!. Not able to find the parent container"
+					LOG "ERROR!. Not able to find the parent container", true
 				else
-					LOG "-----New Container child of " & c.Name
+					LOG "-----New Container child of " & c.Name, false
 					c = OriginalC.CopyTo(c, TL_NEXT)
 
 					DeletePluginMultiProcessParam(c, true)
 
-					LOG "-----Move it to Position: " & SubLevels[SubLevels.UBound]
+					LOG "-----Move it to Position: " & SubLevels[SubLevels.UBound], false
 					MoveContainerTo(c,SubLevels[SubLevels.UBound])
 				end if
 			end if
 			
 			if c = null then
-				LOG "ERROR!. Not able to find the same child"
+				LOG "ERROR!. Not able to find the same child", true
 			else
-				LOG "---FOUND " & GetFullNameC(c)
+				LOG "---FOUND " & GetFullNameC(c), false
 				if plgProcess.GetParameterBool("chgName") Then 
 					c.Name = CreateNewName(OriginalC.Name, plgProcess.GetParameterString("NameFind"), plgProcess.GetParameterString("NameReplace"))
 					If plgProcess.GetParameterBool("chgText") Then
-						LOG "----Change Text"
+						LOG "----Change Text", false
 						if c.Geometry = null or plgProcess.GetParameterBool("TextOriginal") then
 							'Copy the geometry from the original
 							SendCommand("#" & c.VizId & "*GEOM SET GEOM*#" & OriginalC.Geometry.VizId & " NULL")
@@ -205,7 +214,7 @@ Sub ProcessContainer(OriginalC as Container)
 					end if
 
 					if plgProcess.GetParameterBool("cReplaceAllChildren") AND GetParameterBool("Crea") = False Then
-						LOG "----ReplaceAllChildren. Delete all childrens"
+						LOG "----ReplaceAllChildren. Delete all childrens", false
 						'Remove all childres from new place
 						c.DeleteChildren()
 
@@ -213,10 +222,10 @@ Sub ProcessContainer(OriginalC as Container)
 						For Hijitos=OriginalC.ChildContainerCount-1 to 0 step -1
 							Dim CopyFrom as Container = OriginalC.GetChildContainerByIndex(Hijitos)
 							Dim NewVizId as String = SendCommand("#" & Scene.VizId & "*TREE COPY #" & CopyFrom.VizId  & " #" & c.VizId & " RIGHT")
-'							LOG "----TRADUCION: PADRE   :" & OriginalC.VizId  & " #" &OriginalC.Name & " RIGHT"
-'							LOG "----TRADUCION: CopyFrom:" & CopyFrom.VizId  & " #" & CopyFrom.Name & " RIGHT"
-'							LOG "----TRADUCION: CopyTo  :" & c.VizId  & " #" & c.Name & " RIGHT"
-							LOG "----Child Container created:" & NewVizId
+'							LOG "----TRADUCION: PADRE   :" & OriginalC.VizId  & " #" &OriginalC.Name & " RIGHT", false
+'							LOG "----TRADUCION: CopyFrom:" & CopyFrom.VizId  & " #" & CopyFrom.Name & " RIGHT", false
+'							LOG "----TRADUCION: CopyTo  :" & c.VizId  & " #" & c.Name & " RIGHT", false
+							LOG "----Child Container created:" & NewVizId, false
 						Next
 
 						'Delete all the MultiParam plugins from the new tree
@@ -238,16 +247,35 @@ Sub ProcessContainer(OriginalC as Container)
 									Dim OriginalVal as String = SendCommand("#" & OriginalC.VizId & "*" & plgProcess.GetParameterString("ct" & NT & "CPropName") & " GET")
 									Dim NewVal as Double = CalculateNewValue(CDbl(OriginalVal), plgProcess.GetParameterDouble("ct" & NT & "CPropNumber"))
 									SendCommand("#" & c.VizId & "*" & plgProcess.GetParameterString("ct" & NT & "CPropName") & " SET " & NewVal)
-'				LOG "OriginalVal:" & OriginalVal
-'				LOG "NewVal:" & NewVal
-'				LOG "#" & c.VizId & "*" & plgProcess.GetParameterString("ct" & NT & "CPropName") & " SET " & NewVal
+'				LOG "OriginalVal:" & OriginalVal, false
+'				LOG "NewVal:" & NewVal, false
+'				LOG "#" & c.VizId & "*" & plgProcess.GetParameterString("ct" & NT & "CPropName") & " SET " & NewVal, false
 								elseif plgProcess.GetParameterInt("ct" & NT & "CPropType") = 2 Then
 									Dim OldName as string = SendCommand("#" & OriginalC.VizId & "*" & plgProcess.GetParameterString("ct" & NT & "CPropName") & " GET")
 									Dim NewName as string = CreateNewName(OldName, plgProcess.GetParameterString("ct" & NT & "CPropTextFind"), plgProcess.GetParameterString("ct" & NT & "CPropTextReplace"))
 									SendCommand("#" & c.VizId & "*" & plgProcess.GetParameterString("ct" & NT & "CPropName") & " SET " & NewName)
-'				LOG "OldName:" & OldName
-'				LOG "NewName:" & NewName
-'				LOG "#" & c.VizId & "*" & plgProcess.GetParameterString("ct" & NT & "CPropName") & " SET " & NewName
+								elseif plgProcess.GetParameterInt("ct" & NT & "CPropType") = 3 Then 'Container
+									'Get The Container ID - Valido para WINDOW_MASK y otros
+									Dim RefCont as String = SendCommand("#" & OriginalC.VizId & "*" & plgProcess.GetParameterString("ct" & NT & "CPropName") & " GET")
+'LOG "#" & c.VizId & "*" & plgProcess.GetParameterString("ct" & NT & "CPropName") & " GET",true
+									if RefCont.Find(" ")>0 Then RefCont = RefCont.GetSubstring(0,RefCont.Find(" "))
+									Dim RefContPath as String = System.SendCommand(RefCont & "*ABSOLUTE_PATH GET")
+									if RefContPath.StartsWith(MainPath) then
+										Dim strNewPath as String = RefContPath.GetSubString(0, MainPath.Length)
+										Dim lFind as Integer = MainPath.Length + 1
+										Dim strNewPathRight as String = RefContPath.GetSubString(lFind, RefContPath.Length - lFind)
+										lFind = strNewPathRight.Find("/")
+										strNewPathRight = (NumChilds+1) & strNewPathRight.GetSubString(lFind , strNewPathRight.Length - lFind)
+
+										'Get The Cointainer ID
+										Dim strMAINId as String = System.SendCommand("MAIN_SCENE*TREE*" & strNewPath & "/" & strNewPathRight & " GET true true")
+										lFind = strMAINId.Find("#")
+										strMAINId = strMAINId.GetSubString(lFind, strMAINId.Find("*")-lFind)
+										'Set parameter Container
+										SendCommand("#" & c.VizId & "*" & plgProcess.GetParameterString("ct" & NT & "CPropName") & " SET " & strMAINId)
+									else
+										LOG "ERROR - Reference Container is not inside the child container", true
+									end if
 								end if
 							end if
 						Next
@@ -284,7 +312,7 @@ Sub ProcessContainer(OriginalC as Container)
 									'Get the actual value
 									Dim originalVal as String = SendCommand("#" & OriginalC.VizId & "*FUNCTION*" & plgName & "*" & plgProp & " GET")
 									if originalVal.StartsWith("ERROR") then
-										LOG "***ERROR getting the parameter in #" & OriginalC.VizId & "*FUNCTION*" & plgName & "*" & plgProp & " GET"
+										LOG "***ERROR getting the parameter in #" & OriginalC.VizId & "*FUNCTION*" & plgName & "*" & plgProp & " GET",true
 									else
 										if plgProcess.GetParameterInt("ct" & i & "PropType") = 2 Then
 											'Text
@@ -294,6 +322,34 @@ Sub ProcessContainer(OriginalC as Container)
 												Dim NewValue as string = CreateNewName(originalName, NameFind, plgProcess.GetParameterString("ct" & i & "Replace"))
 												plgCtr.SetParameterString(plgProcess.GetParameterString("ct" & i & "Property"), NewValue)
 											End If
+										elseif plgProcess.GetParameterInt("ct" & i & "PropType") = 3 Then 'Container
+											'TODO Container - Ejemplo FUNCTION*Autofollow*REFER_CONTAINER
+									Dim RefCont as String = SendCommand("#" & OriginalC.VizId & "*FUNCTION*" & plgName & "*" & plgProp & " GET")
+LOG "#" & OriginalC.VizId & "*FUNCTION*" & plgName & "*" & plgProp & " GET",true
+									if RefCont.Find(" ")>0 Then RefCont = RefCont.GetSubstring(0,RefCont.Find(" "))
+LOG RefCont, true
+									Dim RefContPath as String = System.SendCommand(RefCont & "*ABSOLUTE_PATH GET")
+									if RefContPath.StartsWith(MainPath) then
+										Dim strNewPath as String = RefContPath.GetSubString(0, MainPath.Length)
+										Dim lFind as Integer = MainPath.Length + 1
+										Dim strNewPathRight as String = RefContPath.GetSubString(lFind, RefContPath.Length - lFind)
+										lFind = strNewPathRight.Find("/")
+										strNewPathRight = CStr(NumChilds+1) & strNewPathRight.GetSubString(lFind , strNewPathRight.Length - lFind)
+
+										'Get The Cointainer ID
+										Dim strMAINId as String = System.SendCommand("MAIN_SCENE*TREE*" & strNewPath & "/" & strNewPathRight & " GET true true")
+										lFind = strMAINId.Find("#")
+										strMAINId = strMAINId.GetSubString(lFind, strMAINId.Find("*")-lFind)
+LOG "strMAINId:" & strMAINId,false
+										'Set parameter Container
+										SendCommand("#" & c.VizId & "*FUNCTION*" & plgName & "*" & plgProp & " SET " & strMAINId)
+LOG "#" & c.VizId & "*FUNCTION*" & plgName & "*" & plgProp & " SET " & strMAINId, true
+										strMAINId
+									else
+										LOG "ERROR - Reference Container is not inside the child container", true
+									end if			
+
+
 										else
 											if plgProcess.GetParameterInt("ct" & i & "PropType") = 1 Then
 												'Number
@@ -301,7 +357,8 @@ Sub ProcessContainer(OriginalC as Container)
 											else
 												'Replace
 											end if
-											SendCommand("#" & OriginalC.VizId & "*FUNCTION*" & plgName & "*" & plgProp & " SET " & originalVal)
+											SendCommand("#" & c.VizId & "*FUNCTION*" & plgName & "*" & plgProp & " SET " & originalVal)
+'											SendCommand("#" & OriginalC.VizId & "*FUNCTION*" & plgName & "*" & plgProp & " SET " & originalVal)
 										end if
 									end if
 								End If
@@ -314,7 +371,7 @@ Sub ProcessContainer(OriginalC as Container)
 				if plgProcess.GetParameterBool("chgDirector") Then 
 					if plgProcess.GetParameterBool("AnimationDupl") Then
 						if c.IsAnimated() Then 
-							LOG "---Delete actual animations from contaner " & c.Name
+							LOG "---Delete actual animations from contaner " & c.Name, false
 							Dim AllChan As Array[Channel]
 							c.GetChannelsOfObject(AllChan)
 							For Each myChannel in AllChan
@@ -322,7 +379,7 @@ Sub ProcessContainer(OriginalC as Container)
 							Next
 						end if
 
-						LOG "---Copy original animation into new container " & c.Name
+						LOG "---Copy original animation into new container " & c.Name, false
 						System.SendCommand("#" & c.VizId & "*ANIMATION COPY #" &  OriginalC.VizId & "*ANIMATION")
 					end if
 
@@ -334,19 +391,19 @@ Sub ProcessContainer(OriginalC as Container)
 					End if
 
 					if OldDir <> null then
-		LOG "---DIRECTOR ok " & OldDir.Name		
+		LOG "---DIRECTOR ok " & OldDir.Name, false
 						Dim ORIGINAL = OldDir.Name
 						Dim DirNewName as String = ""
 						
 						if plgProcess.GetParameterBool("DirCreate") Then
-							LOG "---Create Directory checked"
+							LOG "---Create Directory checked", false
 							
 							if plgProcess.GetParameterString("DirFind") <> "" then
 								DirNewName = CreateNewName(ORIGINAL, plgProcess.GetParameterString("DirFind"), plgProcess.GetParameterString("DirReplace"))
 							Else
 								DirNewName = ORIGINAL
 							end if
-							LOG "---Director Created " & DirNewName
+							LOG "---Director Created " & DirNewName, false
 							
 							Dim bDirectorCreated as Boolean = false
 							NewDir = DirectorExist(OldDir.ParentDirector, DirNewName) 
@@ -362,7 +419,7 @@ Sub ProcessContainer(OriginalC as Container)
 							NewDir.Offset = NewOffset
 						
 							if plgProcess.GetParameterBool("DirEvents") Then
-								LOG "----Creating events"
+								LOG "----Creating events", false
 								Dim OldChannel as Channel = OldDir.EventChannel
 								For numCH=0 to OldChannel.KeyframeCount - 1
 									Dim KF as Keyframe = OldChannel.GetKeyframe(numCH)
@@ -379,7 +436,7 @@ Sub ProcessContainer(OriginalC as Container)
 							
 							'Action KeyFrames
 							if plgProcess.GetParameterBool("chgDirectorAK") Then
-								LOG "---Duplicate Action Keyframes " & OldDir.Name & " to " & NewDir.Name	
+								LOG "---Duplicate Action Keyframes " & OldDir.Name & " to " & NewDir.Name, false
 								'Delete if already exist
 								if plgProcess.GetParameterBool("chgDirectorAKDelete") Then
 									for acc= 0 to NewDir.ActionChannelCount -1
@@ -393,7 +450,7 @@ Sub ProcessContainer(OriginalC as Container)
 								for acc= 0 to OldDir.ActionChannelCount -1
 									Dim OrgChannel = OldDir.GetActionChannel(acc)
 									if OrgChannel.CopyToDirector(NewDir) then
-										LOG "-----Action keyframe channel " & OrgChannel.Name & " copied"
+										LOG "-----Action keyframe channel " & OrgChannel.Name & " copied", false
 										' If the Keyframe has been duplicated check if we need to change it
 										For AK=1 to NumActionKeyFrames
 											if plgProcess.GetParameterBool("DirAK" & AK) Then
@@ -409,7 +466,7 @@ Sub ProcessContainer(OriginalC as Container)
 											end if
 										Next
 									else
-										LOG "ERROR Action keyframe channel " & OrgChannel.Name & ". Channel not created"
+										LOG "ERROR Action keyframe channel " & OrgChannel.Name & ". Channel not created", true
 									end if
 								Next
 							end if
@@ -492,7 +549,7 @@ Sub ProcessContainer(OriginalC as Container)
 			end if
 			NewIndex = NewIndex + 1
 			if NewIndex + GetParameterInt("index") > 500 Then 
-				LOG "ERROR!! - Maximum number of containers exceded. Force Exit"
+				LOG "ERROR!! - Maximum number of containers exceded. Force Exit", true
 				Exit for
 			End If
 		Next
@@ -542,10 +599,10 @@ Sub UpdateAll(c as Container)
 		ProcessContainer c
 		
 		'Do to All the Childs
-		LOG "UpdateAll-" & c.ChildContainerCount-1
+		LOG "UpdateAll-" & c.ChildContainerCount-1, false
 		For i=0 to c.ChildContainerCount-1
 			SubLevels.Push(i)
-		LOG "UpdateAll-" & i & "-" & c.ChildContainerCount-1
+		LOG "UpdateAll-" & i & "-" & c.ChildContainerCount-1, false
 			UpdateAll c.GetChildContainerByIndex(i)
 			SubLevels.Pop
 		Next
@@ -595,7 +652,7 @@ Sub OnParameterChanged(parameterName As String)
     if parameterName= "delete" then
     	if GetParameterInt("delete") <> 1 then
 	    	if GetParameterInt("delete") = 0 then
-				LOG "Deleting all Multi Process Param plugins..."
+				LOG "Deleting all Multi Process Param plugins...", false
 	    		DeletePluginMultiProcessParam(this, true)
 	    	end if
 			SendGuiParameterShow("delete", HIDE)

@@ -1,0 +1,174 @@
+Dim Title as String = "MRubio MultiReplace-Param v.1.0.11"
+Dim TransfProp as Array[String]
+Dim TextureProp as Array[String]
+Dim FontProp as Array[String]
+Dim MatProp as Array[String]
+
+sub InitArrays()
+    'Transformation Properties to Copy
+    TransfProp.Clear()
+    TransfProp.push("POSITION*X")
+    TransfProp.push("POSITION*Y")
+    TransfProp.push("POSITION*Z")
+    TransfProp.push("ROTATION*X")
+    TransfProp.push("ROTATION*Y")
+    TransfProp.push("ROTATION*Z")
+    TransfProp.push("SCALING*X")
+    TransfProp.push("SCALING*Y")
+    TransfProp.push("SCALING*Z")
+    TransfProp.push("CENTER*X")
+    TransfProp.push("CENTER*Y")
+    TransfProp.push("CENTER*Z")
+    TransfProp.push("ROTATION_ORDER")
+
+    'Texture Properties to Copy
+    TextureProp.Clear()
+    TextureProp.push("IMAGE2")
+    TextureProp.push("WRAP")
+    TextureProp.push("DISPLAY_COMPONENT")
+    TextureProp.push("CONSTANT_COLOR")
+    TextureProp.push("POSITION")
+    TextureProp.push("CENTER")
+    TextureProp.push("ROTATION")
+    TextureProp.push("SCALING")
+    TextureProp.push("MAPPING")
+    TextureProp.push("GENMAP_POSITION")
+    TextureProp.push("GENMAP_ROTATION")
+    TextureProp.push("UNIT")
+    TextureProp.push("INHERITABLE")
+    TextureProp.push("QUALITY")
+    TextureProp.push("EFFECT_VALUE")
+    TextureProp.push("SHARPEN_VALUE")
+    TextureProp.push("EFFECT_TYPE")
+    TextureProp.push("ANISOTROPY")
+    TextureProp.push("COMPRESSION")
+    TextureProp.push("ENVIRONMENT")
+    TextureProp.push("BLEND_FACTOR")
+    TextureProp.push("SOURCE_UNIT")
+    TextureProp.push("STEREO_MODE")
+
+    'Font Prop
+    FontProp.Clear()
+    FontProp.push("TEXT_FROM_GUI")
+    FontProp.push("FONT")
+    FontProp.push("KERNING")
+    FontProp.push("WORD_SPACING")
+    FontProp.push("LINE_SPACING")
+    FontProp.push("UNDERLINE_TYPE")
+    FontProp.push("UNDERLINE")
+    FontProp.push("UNDERLINE_SIZE")
+    FontProp.push("TEXT_TYPE")
+    FontProp.push("QUALITY")
+    FontProp.push("DETAIL")
+    FontProp.push("SHARPEN")
+    FontProp.push("ANISOTROPY")
+    FontProp.push("ORIENTATION")
+    FontProp.push("CHAR")
+    FontProp.push("VERTICAL_ORIENTATION")
+    FontProp.push("TBOX*STATE")
+    FontProp.push("TBOX*ANYCHAR")
+    FontProp.push("TBOX*SCALING")
+    FontProp.push("TBOX*WIDTH")
+    FontProp.push("TBOX*HEIGHT")
+    FontProp.push("DROP_SHADOW")
+    FontProp.push("DROP_SHADOW*FONT")
+    FontProp.push("DROP_SHADOW*DIRECTION")
+    FontProp.push("DROP_SHADOW*DISTANCE")
+    FontProp.push("DROP_SHADOW*Z_OFFSET")
+    FontProp.push("DROP_SHADOW*MATERIAL*ALPHA")
+    FontProp.push("DROP_SHADOW*DROP_SHADOW*MATERIAL*COLOR")
+    FontProp.push("DROP_SHADOW*TEXT_TYPE")
+    FontProp.push("DROP_SHADOW*QUALITY")
+    FontProp.push("DROP_SHADOW*SHARPEN")
+    FontProp.push("DROP_SHADOW*ANISOTROPY")
+    'Clocks will not be updated
+    'Special will not be updated
+
+    MatProp.Clear()
+    MatProp.push("ENLIGHTED")
+    MatProp.push("COLOR")
+    MatProp.push("ALPHA")
+    MatProp.push("AMBIENT")
+    MatProp.push("DIFFUSE")
+    MatProp.push("SPECULAR")
+    MatProp.push("EMISSION")
+    MatProp.push("SHININESS")
+end sub
+
+Function NormalizeParam(Prop as String) as String
+    Dim NewProp as String = Prop
+    if NewProp.Find("*") > 0 Then NewProp.ReplaceChar(NewProp.Find("*"), "-")
+    if NewProp.Find("*") > 0 Then NewProp.ReplaceChar(NewProp.Find("*"), "-")
+    if NewProp.Find("*") > 0 Then NewProp.ReplaceChar(NewProp.Find("*"), "-")
+    NormalizeParam = NewProp
+End function
+
+sub OnInitPlugin()
+	RegisterPlugin("MultiReplaceParam")
+	RegisterPluginFolder("MRubio")
+end sub
+
+Sub OnInitParameters()
+	RegisterPluginVersion(1, 0, 11)
+	RegisterInfoText(Title & "\n
+Use it in with plugin MultiReplace. Same version always!!")
+
+    InitArrays()
+
+	Dim NameOptions As Array[String]
+	NameOptions.push "Full Name"
+	NameOptions.push "Part of the Name"
+	RegisterRadioButton("cntNamePrecision", "Container search match:", 0, NameOptions)
+	RegisterParameterString("cntName", "Container Name to Find:", "", 20,250, "")
+
+
+	RegisterParameterBool("trf", "Copy Transformation", false)
+    for each Prop In TransfProp
+	    RegisterParameterBool("trf" & NormalizeParam(Prop), "  update " & Prop, false)
+    next
+
+	RegisterParameterBool("img", "Copy Texture", false)
+    for each Prop In TextureProp
+	    RegisterParameterBool("img" & NormalizeParam(Prop), "  update " & Prop, false)
+    next
+
+	RegisterParameterBool("fnt", "Copy Font", false)
+    for each Prop In FontProp
+	    RegisterParameterBool("fnt" & NormalizeParam(Prop), "  update " & Prop, false)
+    next
+
+	RegisterParameterBool("mat", "Copy Material", false)
+    for each Prop In MatProp
+	    RegisterParameterBool("mat" & NormalizeParam(Prop), "  update " & Prop, false)
+    next
+end sub
+
+Sub OnParameterChanged(parameterName As String)
+    InitArrays()
+    if parameterName = "trf" Then
+        if GetParameterBool("trf") then
+            for each Prop In TransfProp
+                SendGuiParameterShow("trf" & NormalizeParam(Prop), SHOW)
+            next
+        else
+            for each Prop In TransfProp
+                SendGuiParameterShow("trf" & NormalizeParam(Prop), HIDE)
+            next
+        end if
+    elseif parameterName = "img" Then
+        Dim bOK = CInt(GetParameterBool("img"))
+        for each Prop In TextureProp
+            SendGuiParameterShow("img" & NormalizeParam(Prop), bOK)
+        next
+    elseif parameterName = "fnt" Then
+        Dim bOK = CInt(GetParameterBool("fnt"))
+        for each Prop In FontProp
+            SendGuiParameterShow("fnt" & NormalizeParam(Prop), bOK)
+        next
+    elseif parameterName = "mat" Then
+        Dim bOK = CInt(GetParameterBool("mat"))
+        for each Prop In MatProp
+            SendGuiParameterShow("mat" & NormalizeParam(Prop), bOK)
+        next
+    end if
+end sub

@@ -1,4 +1,4 @@
-Dim Title as String = "MRubio MultiProcessParam v.1.0.10"
+Dim Title as String = "MRubio MultiProcessParam v.1.0.11"
 Dim NumKeyControls as Integer = 6
 Dim NumKeyFrames as Integer = 6
 Dim NumPlugins as Integer = 8
@@ -18,9 +18,9 @@ Sub OnInitParameters()
 	KFNameOptions.push "by Postion in Channel"
 	KFNameOptions.push "by Keframe Name"
 
-	RegisterPluginVersion(1, 0, 0)
+	RegisterPluginVersion(1, 0, 11)
 	RegisterInfoText(Title & "\n
-Use it in with plugin xxxx. Same version always!!")
+Use it together with plugin MultiProcess. Same version always!!")
 
 	RegisterParameterBool("chgName", "** CONTAINER **", false)
 	RegisterParameterBool("cNewContainer", "New Container", false)
@@ -39,6 +39,7 @@ Use it in with plugin xxxx. Same version always!!")
 	ChType.push "Copy Original"
 	ChType.push "Number"
 	ChType.push "Text"
+	ChType.push "Container"
 	For NT=1 to NumTrans
 		RegisterParameterBool("chgCProp" & NT, "  Change Container properties " & NT, false)
 		RegisterParameterString("ct" & NT & "CPropName", "   Property Name:", "TRANSFORMATION*POSITION*X", 50,250, "")
